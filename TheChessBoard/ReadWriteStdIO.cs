@@ -105,6 +105,7 @@ namespace TheChessBoard
             proc1.StartInfo.RedirectStandardInput = true;
             proc1.StartInfo.RedirectStandardOutput = true;
             proc1.StartInfo.CreateNoWindow = true;
+            proc1.EnableRaisingEvents = true;
 
             proc2.StartInfo.FileName = Exec2FileName;
             proc2.StartInfo.Arguments = Exec2Arguments;
@@ -112,6 +113,8 @@ namespace TheChessBoard
             proc2.StartInfo.RedirectStandardInput = true;
             proc2.StartInfo.RedirectStandardOutput = true;
             proc2.StartInfo.CreateNoWindow = true;
+            proc2.EnableRaisingEvents = true;
+
 
             //当proc有行输出的时候（为什么一定要按行啊……flush不行吗……），加到尾部
             proc1.OutputDataReceived += (sender, e) =>
@@ -142,7 +145,6 @@ namespace TheChessBoard
 
             proc1.Exited += (sender, e) =>
             {
-                MessageBox.Show("x");
                 if (proc2.HasExited)
                     procStarted = false;
             };
@@ -156,7 +158,7 @@ namespace TheChessBoard
 
         public void Start()
         {
-            if(proc1 == null || proc2 == null)
+            if (proc1 == null || proc2 == null)
             {
                 throw new ApplicationException("Process proc1 and/or proc2 not initialized.");
             }
