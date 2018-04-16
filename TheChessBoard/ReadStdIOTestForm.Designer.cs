@@ -35,6 +35,8 @@
             this.label3 = new System.Windows.Forms.Label();
             this.txbInput2 = new System.Windows.Forms.TextBox();
             this.btnConfirm = new System.Windows.Forms.Button();
+            this.btnStart = new System.Windows.Forms.Button();
+            this.btnStop = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // txbOut1
@@ -78,7 +80,7 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(154, 423);
+            this.label3.Location = new System.Drawing.Point(132, 475);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(99, 15);
             this.label3.TabIndex = 4;
@@ -86,14 +88,14 @@
             // 
             // txbInput2
             // 
-            this.txbInput2.Location = new System.Drawing.Point(283, 420);
+            this.txbInput2.Location = new System.Drawing.Point(265, 468);
             this.txbInput2.Name = "txbInput2";
             this.txbInput2.Size = new System.Drawing.Size(312, 25);
             this.txbInput2.TabIndex = 5;
             // 
             // btnConfirm
             // 
-            this.btnConfirm.Location = new System.Drawing.Point(621, 423);
+            this.btnConfirm.Location = new System.Drawing.Point(613, 471);
             this.btnConfirm.Name = "btnConfirm";
             this.btnConfirm.Size = new System.Drawing.Size(75, 23);
             this.btnConfirm.TabIndex = 6;
@@ -101,11 +103,33 @@
             this.btnConfirm.UseVisualStyleBackColor = true;
             this.btnConfirm.Click += new System.EventHandler(this.btnConfirm_Click);
             // 
+            // btnStart
+            // 
+            this.btnStart.Location = new System.Drawing.Point(202, 400);
+            this.btnStart.Name = "btnStart";
+            this.btnStart.Size = new System.Drawing.Size(151, 45);
+            this.btnStart.TabIndex = 7;
+            this.btnStart.Text = "开始";
+            this.btnStart.UseVisualStyleBackColor = true;
+            this.btnStart.Click += new System.EventHandler(this.btnStart_Click);
+            // 
+            // btnStop
+            // 
+            this.btnStop.Location = new System.Drawing.Point(426, 400);
+            this.btnStop.Name = "btnStop";
+            this.btnStop.Size = new System.Drawing.Size(151, 45);
+            this.btnStop.TabIndex = 8;
+            this.btnStop.Text = "终止";
+            this.btnStop.UseVisualStyleBackColor = true;
+            this.btnStop.Click += new System.EventHandler(this.btnStop_Click);
+            // 
             // ReadStdIOTestForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(805, 567);
+            this.Controls.Add(this.btnStop);
+            this.Controls.Add(this.btnStart);
             this.Controls.Add(this.btnConfirm);
             this.Controls.Add(this.txbInput2);
             this.Controls.Add(this.label3);
@@ -130,5 +154,7 @@
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.TextBox txbInput2;
         private System.Windows.Forms.Button btnConfirm;
+        private System.Windows.Forms.Button btnStart;
+        private System.Windows.Forms.Button btnStop;
     }
 }

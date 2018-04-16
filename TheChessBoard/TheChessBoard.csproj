@@ -56,6 +56,7 @@
     <Compile Include="ReadStdIOTestForm.Designer.cs">
       <DependentUpon>ReadStdIOTestForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="ReadWriteStdIO.cs" />
     <Compile Include="TestStart.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

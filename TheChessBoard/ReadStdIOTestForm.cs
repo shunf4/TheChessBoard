@@ -13,8 +13,7 @@ namespace TheChessBoard
 {
     public partial class ReadStdIOTestForm : Form
     {
-        Process proc1;
-        Process proc2;
+        ReadWriteStdIO rwstd = new ReadWriteStdIO();
 
         public ReadStdIOTestForm()
         {
@@ -23,7 +22,11 @@ namespace TheChessBoard
 
         private void ReadStdIOTestForm_Load(object sender, EventArgs e)
         {
-
+            rwstd.Init(@"..\..\..\TestConsoleApp1\bin\Debug\TestConsoleApp1.exe", "", @"..\..\..\TestConsoleApp2\bin\Debug\TestConsoleApp2.exe", "");
+            txbOut1.DataBindings.Add("Text", rwstd, "outputStr1");
+            txbOut2.DataBindings.Add("Text", rwstd, "outputStr2");
+            btnStart.DataBindings.Add("Enabled", rwstd, "procNotStarted");
+            btnStop.DataBindings.Add("Enabled", rwstd, "procStarted");
         }
 
         private void label1_Click(object sender, EventArgs e)
@@ -38,31 +41,17 @@ namespace TheChessBoard
 
         private void btnConfirm_Click(object sender, EventArgs e)
         {
-            proc1 = new Process();
-            proc2 = new Process();
-            proc1.StartInfo.FileName = @"..\..\..\TestConsoleApp1\bin\Debug\TestConsoleApp1.exe";
-            proc1.StartInfo.UseShellExecute = false;
-            proc1.StartInfo.RedirectStandardInput = true;
-            proc1.StartInfo.RedirectStandardOutput = true;
-            proc1.StartInfo.CreateNoWindow = true;
-            proc1.Start();
+            rwstd.WriteToProc2(txbInput2.Text);
+        }
 
-            proc2.StartInfo.FileName = @"..\..\..\TestConsoleApp2\bin\Debug\TestConsoleApp2.exe";
-            proc2.StartInfo.UseShellExecute = false;
-            proc2.StartInfo.RedirectStandardInput = true;
-            proc2.StartInfo.RedirectStandardOutput = true;
-            proc2.StartInfo.CreateNoWindow = true;
-            proc2.Start();
+        private void btnStart_Click(object sender, EventArgs e)
+        {
+            rwstd.Start();
+        }
 
-            if (proc1 != null && proc2 != null)
-            {
-                proc2.StandardInput.WriteLine(txbInput2.Text);
-                txbOut1.Text = proc1.StandardOutput.ReadToEnd();
-                txbOut2.Text = proc2.StandardOutput.ReadToEnd();
-            }
-
-            proc1.WaitForExit();
-            proc2.WaitForExit();
+        private void btnStop_Click(object sender, EventArgs e)
+        {
+            rwstd.Stop();
         }
     }
 }
