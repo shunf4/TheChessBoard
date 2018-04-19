@@ -147,12 +147,14 @@ namespace TheChessBoard
             {
                 if (proc2.HasExited)
                     procStarted = false;
+                proc1.CancelOutputRead();
             };
 
             proc2.Exited += (sender, e) =>
             {
                 if (proc1.HasExited)
                     procStarted = false;
+                proc2.CancelOutputRead();
             };
         }
 

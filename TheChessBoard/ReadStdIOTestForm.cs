@@ -27,6 +27,7 @@ namespace TheChessBoard
             txbOut2.DataBindings.Add("Text", rwstd, "outputStr2");
             btnStart.DataBindings.Add("Enabled", rwstd, "procNotStarted");
             btnStop.DataBindings.Add("Enabled", rwstd, "procStarted");
+            btnConfirm.DataBindings.Add("Enabled", rwstd, "procStarted");
         }
 
         private void label1_Click(object sender, EventArgs e)
