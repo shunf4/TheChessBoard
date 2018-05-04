@@ -12,6 +12,8 @@ namespace TheChessBoard
 {
     public partial class PrimitiveBoard : Form
     {
+        StdIOGame game;
+        ChessDotNet.Player currentPlayer;
         public PrimitiveBoard()
         {
             InitializeComponent();
@@ -19,9 +21,26 @@ namespace TheChessBoard
 
         private void PrimitiveBoard_Load(object sender, EventArgs e)
         {
-            StdIOGame game = new StdIOGame("", "", "", "");
+            game = new StdIOGame("", "", "", "");
             txbBoard.DataBindings.Add("Text", game, "BoardString", false, DataSourceUpdateMode.OnPropertyChanged);
-            game.ParseAndApplyMove("Nc3", ChessDotNet.Player.White);
+            playerCheckedChanged(null, null);
+        }
+
+        private void btnMove_Click(object sender, EventArgs e)
+        {
+            game.ParseAndApplyMove(txbMoveStr.Text, currentPlayer);
+        }
+
+        private void playerCheckedChanged(object sender, EventArgs e)
+        {
+            if(rdbBlack.Checked)
+            {
+                currentPlayer = ChessDotNet.Player.Black;
+            }
+            if (rdbWhite.Checked)
+            {
+                currentPlayer = ChessDotNet.Player.White;
+            }
         }
     }
 }
