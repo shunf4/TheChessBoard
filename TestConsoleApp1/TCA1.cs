@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,7 +10,7 @@ namespace TestConsoleApp1
     {
         static void Main()
         {
-            String str1 = "TCA1";
+            String str1 = "Bc3";
             Console.Write(str1 + Environment.NewLine);
         }
         
