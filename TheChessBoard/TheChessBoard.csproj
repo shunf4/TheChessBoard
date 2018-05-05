@@ -7,7 +7,7 @@
     <ProjectGuid>{DAAF291E-B7B2-4D61-B4B2-DC42AD1C0BDA}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <RootNamespace>TheChessBoard</RootNamespace>
-    <AssemblyName>TheChessBoard</AssemblyName>
+    <AssemblyName>SANChessBoard</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -35,9 +35,6 @@
     <StartupObject>TheChessBoard.PrimitiveBoardStart</StartupObject>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ChessDotNet, Version=0.9.6.0, Culture=neutral, PublicKeyToken=95fb3ccd1157343b, processorArchitecture=MSIL">
-      <HintPath>..\packages\ChessDotNet.0.9.6\lib\netstandard1.3\ChessDotNet.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -85,7 +82,6 @@
     <EmbeddedResource Include="ReadStdIOTestForm.resx">
       <DependentUpon>ReadStdIOTestForm.cs</DependentUpon>
     </EmbeddedResource>
-    <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -98,6 +94,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Chess.NET\ChessDotNet\ChessDotNet.csproj">
+      <Project>{be2e6962-a2b9-4c04-9b93-011f51617166}</Project>
+      <Name>ChessDotNet</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

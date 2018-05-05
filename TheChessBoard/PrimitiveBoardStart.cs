@@ -12,6 +12,7 @@ namespace TheChessBoard
         static void Main()
         {
             Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(true);
             Application.Run(new PrimitiveBoard());
         }
     }

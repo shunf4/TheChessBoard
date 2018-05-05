@@ -47,6 +47,7 @@ namespace TheChessBoard
             this.btnWhiteReadLine.TabIndex = 1;
             this.btnWhiteReadLine.Text = "白方读入一行";
             this.btnWhiteReadLine.UseVisualStyleBackColor = true;
+            this.btnWhiteReadLine.Visible = false;
             // 
             // btnBlackReadLine
             // 
@@ -56,6 +57,7 @@ namespace TheChessBoard
             this.btnBlackReadLine.TabIndex = 2;
             this.btnBlackReadLine.Text = "黑方读入一行";
             this.btnBlackReadLine.UseVisualStyleBackColor = true;
+            this.btnBlackReadLine.Visible = false;
             // 
             // txbBoard
             // 
@@ -77,9 +79,9 @@ namespace TheChessBoard
             // 
             this.btnMove.Location = new System.Drawing.Point(618, 632);
             this.btnMove.Name = "btnMove";
-            this.btnMove.Size = new System.Drawing.Size(75, 23);
+            this.btnMove.Size = new System.Drawing.Size(108, 38);
             this.btnMove.TabIndex = 3;
-            this.btnMove.Text = "走一步";
+            this.btnMove.Text = "走一步(&S)";
             this.btnMove.UseVisualStyleBackColor = true;
             this.btnMove.Click += new System.EventHandler(this.btnMove_Click);
             // 
@@ -88,7 +90,7 @@ namespace TheChessBoard
             this.txbMoveStr.Location = new System.Drawing.Point(211, 633);
             this.txbMoveStr.Name = "txbMoveStr";
             this.txbMoveStr.Size = new System.Drawing.Size(184, 25);
-            this.txbMoveStr.TabIndex = 4;
+            this.txbMoveStr.TabIndex = 0;
             // 
             // rdbWhite
             // 
@@ -136,7 +138,7 @@ namespace TheChessBoard
             this.Controls.Add(this.btnWhiteReadLine);
             this.Controls.Add(this.txbBoard);
             this.Name = "PrimitiveBoard";
-            this.Text = "PrimitiveBoard";
+            this.Text = "代数记谱法验证器";
             this.Load += new System.EventHandler(this.PrimitiveBoard_Load);
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();

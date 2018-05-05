@@ -114,8 +114,9 @@ namespace TheChessBoard
 
         public void ParseAndApplyMove(string moveInStr, Player player)
         {
-            Move move = PgnMoveReader.ParseMove(moveInStr, player, Game);
-            Game.ApplyMove(move, false);
+            Move move = PgnMoveReader.ParseMove(moveInStr, player, Game, true);
+            Piece captured;
+            Game.ApplyMove(move, false, out captured, false);
             NotifyPropertyChanged("BoardString");
         }
         
