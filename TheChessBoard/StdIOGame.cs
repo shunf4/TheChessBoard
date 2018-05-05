@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using ChessDotNet;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using ChessDotNet.Pieces;
 
 namespace TheChessBoard
 {
@@ -15,9 +16,14 @@ namespace TheChessBoard
         SquareBlack
     }
 
-    
+    public enum StdIOGameStatus
+    {
+        Idle,
+        Selected,
+        Running
+    }
 
-    public class StdIOGame : INotifyPropertyChanged 
+    public class StdIOGame : INotifyPropertyChanged
     {
         #region INotifyPropertyChanged 成员
         public event PropertyChangedEventHandler PropertyChanged;
@@ -30,18 +36,75 @@ namespace TheChessBoard
         StdIOHandler plyWhiteIO;
         StdIOHandler plyBlackIO;
 
+        public StdIOGameStatus StdIOGameStatus;
+
+
         public ChessGame Game;
+
+        private static readonly Dictionary<char, Piece> FenMappings = new Dictionary<char, Piece>()
+        {
+            { 'K', new King(Player.White) },
+            { 'k', new King(Player.Black) },
+            { 'Q', new Queen(Player.White) },
+            { 'q', new Queen(Player.Black) },
+            { 'R', new Rook(Player.White) },
+            { 'r', new Rook(Player.Black) },
+            { 'B', new Bishop(Player.White) },
+            { 'b', new Bishop(Player.Black) },
+            { 'N', new Knight(Player.White) },
+            { 'n', new Knight(Player.Black) },
+            { 'P', new Pawn(Player.White) },
+            { 'p', new Pawn(Player.Black) },
+        };
 
         public StdIOGame(string plyWhiteExecFileName, string plyWhiteExecArguments, string plyBlackExecFileName, string plyBlackExecArguments)
         {
             plyWhiteIO = new StdIOHandler(plyWhiteExecFileName, plyWhiteExecArguments, null);
             plyBlackIO = new StdIOHandler(plyBlackExecFileName, plyBlackExecArguments, null);
 
-            Game = new ChessGame();
+            Piece kw = FenMappings['K'];
+            Piece kb = FenMappings['k'];
+            Piece qw = FenMappings['Q'];
+            Piece qb = FenMappings['q'];
+            Piece rw = FenMappings['R'];
+            Piece rb = FenMappings['r'];
+            Piece nw = FenMappings['N'];
+            Piece nb = FenMappings['n'];
+            Piece bw = FenMappings['B'];
+            Piece bb = FenMappings['b'];
+            Piece pw = FenMappings['P'];
+            Piece pb = FenMappings['p'];
+            Piece o = null;
 
+            var gameCreationData = new GameCreationData
+            {
+                Board = new Piece[8][]
+                {
+                    new[] { rb, nb, bb, qb, kb, bb, nb, rb },
+                    new[] { pb, pb, pb, pb, pb, pb, pb, pb },
+                    new[] { o, o, o, o, o, o, o, o },
+                    new[] { o, o, o, o, o, o, o, o },
+                    new[] { o, o, o, o, o, o, o, o },
+                    new[] { o, o, o, o, o, o, o, o },
+                    new[] { pw, pw, pw, pw, pw, pw, pw, pw },
+                    new[] { rw, nw, bw, qw, kw, bw, nw, rw }
+                },
+                DrawClaimed = false,
+                DrawReason = "",
+                WhoseTurn = Player.White,
+                careWhoseTurnItIs = false,
+                CanWhiteCastleKingSide = true,
+                CanWhiteCastleQueenSide = true,
+                CanBlackCastleKingSide = true,
+                CanBlackCastleQueenSide = true,
+                EnPassant = null
+            };
+
+            Game = new ChessGame(gameCreationData);
+            StdIOGameStatus = StdIOGameStatus.Idle;
         }
 
-        
+
 
         public static readonly Dictionary<Tuple<char, SquareColor>, char> fenAndSquareColorMappings = new Dictionary<Tuple<char, SquareColor>, char>()
         {
@@ -79,16 +142,14 @@ namespace TheChessBoard
         };
 
 
-        public string BoardString
+        public char[] BoardPrint
         {
             get
             {
                 Piece[][] gameBoard = Game.GetBoard();
-                StringBuilder boardPrint = new StringBuilder();
+                char[] boardPrint = new char[64];
                 for (int r = 0; r < gameBoard.Length; r++)
                 {
-                    if (r != 0)
-                        boardPrint.AppendLine();
                     for (int j = 0; j < gameBoard[0].Length; j++)
                     {
                         Piece piece = gameBoard[r][j];
@@ -104,21 +165,26 @@ namespace TheChessBoard
                             var thisTuple = Tuple.Create(piece.GetFenCharacter(), sc);
                             charOnBoard = fenAndSquareColorMappings[thisTuple];
                         }
-                        boardPrint.Append(charOnBoard);
+                        boardPrint[r * 8 + j] = charOnBoard;
                     }
 
                 }
-                return boardPrint.ToString();
+                return boardPrint;
             }
         }
 
-        public void ParseAndApplyMove(string moveInStr, Player player)
+        public void ParseAndApplyMove(string moveInStr, Player player, out Piece captured)
         {
-            Move move = PgnMoveReader.ParseMove(moveInStr, player, Game, true);
-            Piece captured;
-            Game.ApplyMove(move, false, out captured, false);
-            NotifyPropertyChanged("BoardString");
+            Move move = PgnMoveReader.ParseMove(moveInStr, player, Game);
+            ApplyMove(move, false, out captured);
         }
-        
+
+        public void ApplyMove(Move move, bool alreadyValidated, out Piece captured)
+        {
+            Game.ApplyMove(move, alreadyValidated, out captured);
+            NotifyPropertyChanged("BoardPrint");
+        }
+
+
     }
 }

@@ -60,7 +60,7 @@ namespace ChessDotNet
         public File InitialWhiteKingFile { get; protected set; }
         public File InitialBlackKingFile { get; protected set; }
 
-        private Dictionary<char, Piece> fenMappings = new Dictionary<char, Piece>()
+        public static Dictionary<char, Piece> OriginalFenMappings = new Dictionary<char, Piece>()
         {
             { 'K', new King(Player.White) },
             { 'k', new King(Player.Black) },
@@ -79,7 +79,7 @@ namespace ChessDotNet
         {
             get
             {
-                return fenMappings;
+                return OriginalFenMappings;
             }
         }
 
@@ -108,11 +108,38 @@ namespace ChessDotNet
             }
         }
 
+        public static Piece OriginalMapPgnCharToPiece(char c, Player owner)
+        {
+            switch (c)
+            {
+                case 'K':
+                    return owner == Player.White ? OriginalFenMappings['K'] : OriginalFenMappings['k'];
+                case 'Q':
+                    return owner == Player.White ? OriginalFenMappings['Q'] : OriginalFenMappings['q'];
+                case 'R':
+                    return owner == Player.White ? OriginalFenMappings['R'] : OriginalFenMappings['r'];
+                case 'B':
+                    return owner == Player.White ? OriginalFenMappings['B'] : OriginalFenMappings['b'];
+                case 'N':
+                    return owner == Player.White ? OriginalFenMappings['N'] : OriginalFenMappings['n'];
+                case 'P':
+                    return owner == Player.White ? OriginalFenMappings['P'] : OriginalFenMappings['p'];
+                default:
+                    if (!char.IsLower(c))
+                    {
+                        throw new PgnException("Unrecognized piece type: " + c.ToString());
+                    }
+                    return owner == Player.White ? OriginalFenMappings['P'] : OriginalFenMappings['p'];
+            }
+        }
+
         public virtual bool NeedsPgnMoveSpecialTreatment(string move, Player player) { return false; }
         public virtual bool HandleSpecialPgnMove(string move, Player player) { return false;  } 
 
         protected bool fiftyMoves = false;
         protected virtual bool FiftyMovesAndThisCanResultInDraw { get { return fiftyMoves; } }
+
+        protected bool careWhoseTurnItIs = true;
 
         public virtual bool DrawCanBeClaimed
         {
@@ -331,6 +358,7 @@ namespace ChessDotNet
         {
             Board = CloneBoard(data.Board);
             WhoseTurn = data.WhoseTurn;
+            careWhoseTurnItIs = data.careWhoseTurnItIs;
 
             Piece[] eighthRank = Board[0];
             Piece[] firstRank = Board[7];
@@ -486,9 +514,10 @@ namespace ChessDotNet
             Piece[][] board = new Piece[8][];
             string[] rows = parts[0].Split('/');
             if (!ValidFenBoardRows.Contains(rows.Length)) throw new ArgumentException("The board in the FEN string has an invalid number of rows.");
-            GameCreationData data = new GameCreationData();
-
-            data.Board = InterpretBoardOfFen(parts[0]);
+            GameCreationData data = new GameCreationData
+            {
+                Board = InterpretBoardOfFen(parts[0])
+            };
 
             if (parts[1] == "w")
             {
@@ -611,13 +640,13 @@ namespace ChessDotNet
         public bool IsValidMove(Move move)
         {
             ChessUtilities.ThrowIfNull(move, "move");
-            return IsValidMove(move, true, true);
+            return IsValidMove(move, true, careWhoseTurnItIs);
         }
 
-        protected bool IsValidMove(Move move, bool validateCheck)
+        public bool IsValidMove(Move move, bool validateCheck)
         {
             ChessUtilities.ThrowIfNull(move, "move");
-            return IsValidMove(move, validateCheck, true);
+            return IsValidMove(move, validateCheck, careWhoseTurnItIs);
         }
 
         public virtual bool IsValidMove(Move move, bool validateCheck, bool careAboutWhoseTurnItIs)
@@ -807,14 +836,6 @@ namespace ChessDotNet
             return type;
         }
 
-        public virtual MoveType ApplyMove(Move move, bool alreadyValidated, out Piece captured, bool switchWhoseTurn)
-        {
-            ChessUtilities.ThrowIfNull(move, "move");
-            MoveType moveType = ApplyMove(move, alreadyValidated, out captured);
-            WhoseTurn = move.Player;
-            return moveType;
-        }
-
         protected virtual void AddDetailedMove(DetailedMove dm)
         {
             _moves.Add(dm);
@@ -828,10 +849,7 @@ namespace ChessDotNet
 
         public virtual ReadOnlyCollection<Move> GetValidMoves(Position from, bool returnIfAny)
         {
-            ChessUtilities.ThrowIfNull(from, "from");
-            Piece piece = GetPieceAt(from);
-            if (piece == null || piece.Owner != WhoseTurn) return new ReadOnlyCollection<Move>(new List<Move>());
-            return piece.GetValidMoves(from, returnIfAny, this, IsValidMove);
+            return GetValidMoves(from, returnIfAny, careWhoseTurnItIs);
         }
 
         public virtual ReadOnlyCollection<Move> GetValidMoves(Position from, bool returnIfAny, bool careAboutWhoseTurnItIs)
@@ -849,24 +867,7 @@ namespace ChessDotNet
 
         public virtual ReadOnlyCollection<Move> GetValidMoves(Player player, bool returnIfAny)
         {
-            if (player != WhoseTurn) return new ReadOnlyCollection<Move>(new List<Move>());
-            List<Move> validMoves = new List<Move>();
-            for (int r = 1; r <= Board.Length; r++)
-            {
-                for (int f = 0; f < Board[8 - r].Length; f++)
-                {
-                    Piece p = GetPieceAt((File)f, r);
-                    if (p != null && p.Owner == player)
-                    {
-                        validMoves.AddRange(GetValidMoves(new Position((File)f, r), returnIfAny));
-                        if (returnIfAny && validMoves.Count > 0)
-                        {
-                            return new ReadOnlyCollection<Move>(validMoves);
-                        }
-                    }
-                }
-            }
-            return new ReadOnlyCollection<Move>(validMoves);
+            return GetValidMoves(player, returnIfAny, careWhoseTurnItIs);
         }
 
         public virtual ReadOnlyCollection<Move> GetValidMoves(Player player, bool returnIfAny, bool careAboutWhoseTurnItIs)

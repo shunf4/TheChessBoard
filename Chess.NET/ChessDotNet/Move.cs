@@ -1,4 +1,6 @@
-﻿namespace ChessDotNet
+using System.Text;
+
+namespace ChessDotNet
 {
     public class Move
     {

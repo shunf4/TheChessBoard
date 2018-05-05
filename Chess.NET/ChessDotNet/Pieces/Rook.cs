@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
@@ -41,6 +41,11 @@ namespace ChessDotNet.Pieces
         public override char GetFenCharacter()
         {
             return Owner == Player.White ? 'R' : 'r';
+        }
+
+        public override string GetFriendlyName()
+        {
+            return Owner == Player.White ? "白车" : "黑车";
         }
 
         public override bool IsValidMove(Move move, ChessGame game)

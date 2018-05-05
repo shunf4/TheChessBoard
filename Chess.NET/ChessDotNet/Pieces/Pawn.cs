@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -39,6 +39,11 @@ namespace ChessDotNet.Pieces
         public override char GetFenCharacter()
         {
             return Owner == Player.White ? 'P' : 'p';
+        }
+
+        public override string GetFriendlyName()
+        {
+            return Owner == Player.White ? "白兵" : "黑兵";
         }
 
         protected virtual char[] ValidPromotionPieces

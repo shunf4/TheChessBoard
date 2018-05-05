@@ -1,4 +1,5 @@
-﻿namespace ChessDotNet
+
+namespace ChessDotNet
 {
     public class DetailedMove : Move
     {
@@ -21,6 +22,33 @@
         }
 
         protected DetailedMove() { }
+
+        public string FriendlyText
+        {
+            get
+            {
+                var sb = new System.Text.StringBuilder();
+                sb.Append(Piece.GetFriendlyName());
+                sb.Append("从");
+                sb.Append(OriginalPosition.ToString());
+                sb.Append("到");
+                sb.Append(NewPosition.ToString());
+                if(Promotion.HasValue)
+                {
+                    sb.Append(", 晋升为");
+                    sb.Append(ChessGame.OriginalMapPgnCharToPiece(Promotion.Value, Piece.Owner).GetFriendlyName());
+                }
+                return sb.ToString();
+            }
+        }
+
+        public string SANString
+        {
+            get
+            {
+                return "(not yet developed)";
+            }
+        }
 
         public DetailedMove(Position originalPosition, Position newPosition, Player player, char? promotion, Piece piece, bool isCapture, CastlingType castling) : 
             base(originalPosition, newPosition, player, promotion)

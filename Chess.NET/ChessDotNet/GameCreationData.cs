@@ -1,4 +1,4 @@
-﻿namespace ChessDotNet
+namespace ChessDotNet
 {
     public class GameCreationData
     {
@@ -33,6 +33,12 @@
         } = Player.None;
 
         public Player WhoseTurn
+        {
+            get;
+            set;
+        }
+
+        public bool careWhoseTurnItIs
         {
             get;
             set;

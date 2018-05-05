@@ -7,7 +7,7 @@
     <ProjectGuid>{DAAF291E-B7B2-4D61-B4B2-DC42AD1C0BDA}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <RootNamespace>TheChessBoard</RootNamespace>
-    <AssemblyName>SANChessBoard</AssemblyName>
+    <AssemblyName>PrimitiveChessBoard</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -49,6 +49,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Extensions\PgnReaderExtension.cs" />
+    <Compile Include="MoveDisambiguationDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MoveDisambiguationDialog.Designer.cs">
+      <DependentUpon>MoveDisambiguationDialog.cs</DependentUpon>
+    </Compile>
     <Compile Include="PrimitiveBoard.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -67,6 +73,9 @@
     <Compile Include="StdIOGame.cs" />
     <Compile Include="StdIOHandler.cs" />
     <Compile Include="TestStart.cs" />
+    <EmbeddedResource Include="MoveDisambiguationDialog.resx">
+      <DependentUpon>MoveDisambiguationDialog.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="PrimitiveBoard.resx">
       <DependentUpon>PrimitiveBoard.cs</DependentUpon>
     </EmbeddedResource>

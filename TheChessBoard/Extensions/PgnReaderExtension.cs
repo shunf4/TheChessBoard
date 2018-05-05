@@ -9,7 +9,7 @@ namespace ChessDotNet
 {
     public static class PgnMoveReader
     {
-        public static Move ParseMove(string moveInStr, Player player, ChessGame game, bool careWhoseTurnItIs)
+        public static Move ParseMove(string moveInStr, Player player, ChessGame game)
         {
             string move = moveInStr.TrimEnd('#', '?', '!', '+').Trim();
 
@@ -61,6 +61,11 @@ namespace ChessDotNet
             File fileRestriction = File.None;
             if (destination == null)
             {
+                if (move.Length == 0)
+                {
+                    throw new PgnException("The position of Move is empty.");
+                }
+
                 if (move[0] == 'x')
                 {
                     move = move.Remove(0, 1);
@@ -126,7 +131,7 @@ namespace ChessDotNet
                         if (fileRestriction != File.None && f != (int)fileRestriction) continue;
                         if (board[r][f] != piece) continue;
                         m = new Move(new Position((File)f, 8 - r), destination, player, promotion);
-                        if (game.IsValidMove(m, true, careWhoseTurnItIs))
+                        if (game.IsValidMove(m, true))
                         {
                             validMoves.Add(m);
                         }
