@@ -33,9 +33,9 @@ namespace TheChessBoard
 
         public PrimitiveBoard(StdIOGame formGame)
         {
-            FormGame = formGame;
             InitializeComponent();
             InitializeCustomComponent();
+            GameStart(formGame);
         }
 
         private Button[] btnBoardSquares;
@@ -85,10 +85,40 @@ namespace TheChessBoard
 
         private void PrimitiveBoard_Load(object sender, EventArgs e)
         {
+        }
+
+        private void GameStart(StdIOGame formGame)
+        {
+            FormGame = formGame;
+            FormGame.PropertyChanged -= FormGamePropertyChangedSubscriber_UpdateUI;
             FormGame.PropertyChanged += FormGamePropertyChangedSubscriber_UpdateUI;
+            FormGame.GameProcedureStatusUpdated += FormGameGameProcedureStatusUpdatedSubscriber;
+
             FormGamePropertyChangedSubscriber_UpdateUI(null, null);
+            FormGameGameProcedureStatusUpdatedSubscriber(FormGame.StdIOGameProcedureStatus, "");
             SANPlayerChanged(null, null);
             DestinationMoves = new Dictionary<Button, List<MoreDetailedMove>>();
+        }
+
+        private void FormGameGameProcedureStatusUpdatedSubscriber(StdIOGameProcedureState pState, string reason)
+        {
+            if (pState == StdIOGameProcedureState.Running)
+            {
+                //for (int r = 0; r < 64; r++)
+                //{
+                //    btnBoardSquares[r].Enabled = true;
+                //}
+                btnMove.Enabled = true;
+            }
+            else
+            {
+                //for (int r = 0; r < 64; r++)
+                //{
+                //    btnBoardSquares[r].Enabled = false;
+                //}
+                btnMove.Enabled = false;
+                MessageBox.Show(reason, "游戏结束", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+            }
         }
 
         private void btnMove_Click(object sender, EventArgs e)
@@ -203,7 +233,7 @@ namespace TheChessBoard
         void SquareRightMouseButton(int currRank, File currFile)
         {
             bool didSomething = SquareClick(currRank, currFile, false, false);
-            if(didSomething && FormGame.StdIOGameStatus == StdIOGameStatus.Selected)
+            if(didSomething && FormGame.StdIOGameControlStatus == StdIOGameControlState.Selected)
             {
                 if (DestinationMoves.Count == 0)
                     return;
@@ -226,16 +256,18 @@ namespace TheChessBoard
 
         void SquareCancelSelect()
         {
-            FormGame.StdIOGameStatus = StdIOGameStatus.Idle;
+            FormGame.StdIOGameControlStatus = StdIOGameControlState.Idle;
             CleanSquareColor();
         }
 
         bool SquareClick(int currRank, File currFile, bool allowCancelSelect = true, bool allowMoveSelect = true)
         {
+            if (FormGame.StdIOGameProcedureStatus != StdIOGameProcedureState.Running)
+                return false;
             var pos = new Position(currFile, currRank);
             var clickedButton = btnBoardSquares[8 * (8 - currRank) + (int)currFile];
 
-            if (FormGame.StdIOGameStatus == StdIOGameStatus.Selected)
+            if (FormGame.StdIOGameControlStatus == StdIOGameControlState.Selected)
             {
                 bool cancelSelect = pos.Equals(SelectedPosition) && allowCancelSelect;
                 bool moveSelect = DestinationMoves.ContainsKey(clickedButton) && allowMoveSelect;
@@ -265,7 +297,7 @@ namespace TheChessBoard
                 }
             }
 
-            if (FormGame.StdIOGameStatus == StdIOGameStatus.Idle || FormGame.StdIOGameStatus == StdIOGameStatus.Selected)
+            if (FormGame.StdIOGameControlStatus == StdIOGameControlState.Idle || FormGame.StdIOGameControlStatus == StdIOGameControlState.Selected)
             {
                 var validMoves = FormGame.Game.GetValidMoves(pos, false);
                 var piece = FormGame.Game.GetPieceAt(pos);
@@ -273,7 +305,7 @@ namespace TheChessBoard
                 {
                     CleanSquareColor();
                     SelectedPosition = pos;
-                    FormGame.StdIOGameStatus = StdIOGameStatus.Selected;
+                    FormGame.StdIOGameControlStatus = StdIOGameControlState.Selected;
 
                     DestinationMoves.Clear();
 

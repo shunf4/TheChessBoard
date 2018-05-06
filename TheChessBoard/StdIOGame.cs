@@ -16,14 +16,24 @@ namespace TheChessBoard
         SquareBlack
     }
 
-    public enum StdIOGameStatus
+    public enum StdIOGameControlState
     {
         Idle,
         Selected,
-        Running
+        StdIORunning
+    }
+
+    public enum StdIOGameProcedureState
+    {
+        Running,
+        WhiteWins,
+        BlackWins,
+        Draw
     }
 
     public delegate void AppliedMoveEventHandler();
+
+    public delegate void GameProcedureStatusUpdateEventHandler(StdIOGameProcedureState gamePState, string reason);
 
     public class StdIOGame : INotifyPropertyChanged
     {
@@ -35,16 +45,56 @@ namespace TheChessBoard
         }
         #endregion
 
-
-        public AppliedMoveEventHandler AppliedMove;
+        public event GameProcedureStatusUpdateEventHandler GameProcedureStatusUpdated;
+        public event AppliedMoveEventHandler AppliedMove;
 
         StdIOHandler plyWhiteIO;
         StdIOHandler plyBlackIO;
 
-        public StdIOGameStatus StdIOGameStatus;
-
+        public StdIOGameControlState StdIOGameControlStatus { get; set; }
+        public StdIOGameProcedureState StdIOGameProcedureStatus { get; private set; }
 
         public ChessGame Game;
+
+        public void GameProcedureStatusUpdate()
+        {
+            bool whiteWins = Game.IsCheckmated(Player.Black);
+            bool blackWins = Game.IsCheckmated(Player.White);
+            bool drawWhiteStalemate = Game.IsStalemated(Player.White);
+            bool drawBlackStalemate = Game.IsStalemated(Player.Black);
+            bool drawFifty = Game.FiftyMovesAndThisCanResultInDraw;
+            if (whiteWins || blackWins || drawBlackStalemate || drawWhiteStalemate || drawFifty)
+            {
+                
+                StringBuilder resultStr = new StringBuilder();
+                if (whiteWins)
+                {
+                    resultStr.Append("黑方被将死。白方胜！");
+                    StdIOGameProcedureStatus = StdIOGameProcedureState.WhiteWins;
+                }
+                else if(blackWins)
+                {
+                    resultStr.Append("白方被将死。黑方胜！");
+                    StdIOGameProcedureStatus = StdIOGameProcedureState.BlackWins;
+                }
+                else if (drawWhiteStalemate)
+                {
+                    resultStr.Append("白方陷入僵局。和局！");
+                    StdIOGameProcedureStatus = StdIOGameProcedureState.Draw;
+                }
+                else if (drawBlackStalemate)
+                {
+                    resultStr.Append("黑方陷入僵局。和局！");
+                    StdIOGameProcedureStatus = StdIOGameProcedureState.Draw;
+                }
+                else if (drawFifty)
+                {
+                    resultStr.Append("50 回合内无走兵或吃子动作。和局！");
+                    StdIOGameProcedureStatus = StdIOGameProcedureState.Draw;
+                }
+                this.GameProcedureStatusUpdated.Invoke(StdIOGameProcedureStatus, resultStr.ToString());
+            }
+        }
 
         public bool CareWhoseTurnItIs
         {
@@ -127,7 +177,8 @@ namespace TheChessBoard
             };
 
             Game = new ChessGame(gameCreationData);
-            StdIOGameStatus = StdIOGameStatus.Idle;
+            StdIOGameControlStatus = StdIOGameControlState.Idle;
+            StdIOGameProcedureStatus = StdIOGameProcedureState.Running;
         }
 
 
@@ -199,18 +250,25 @@ namespace TheChessBoard
             }
         }
 
-        public void ParseAndApplyMove(string moveInStr, Player player, out Piece captured)
+        public MoveType ParseAndApplyMove(string moveInStr, Player player, out Piece captured)
         {
             Move move = PgnMoveReader.ParseMove(moveInStr, player, Game);
-            ApplyMove(move, false, out captured);
+            var moveResult = ApplyMove(move, false, out captured);
+            if (moveResult == MoveType.Invalid)
+                throw new ArgumentException("Move Invalid.");
+            return moveResult;
         }
 
-        public void ApplyMove(Move move, bool alreadyValidated, out Piece captured)
+        public MoveType ApplyMove(Move move, bool alreadyValidated, out Piece captured)
         {
-            Game.ApplyMove(move, alreadyValidated, out captured);
+            var moveResult = Game.ApplyMove(move, alreadyValidated, out captured);
+            if (moveResult == MoveType.Invalid)
+                throw new ArgumentException("Move Invalid.");
             NotifyPropertyChanged("BoardPrint");
             NotifyPropertyChanged("WhoseTurn");
             AppliedMove?.Invoke();
+            GameProcedureStatusUpdate();
+            return moveResult;
         }
 
 

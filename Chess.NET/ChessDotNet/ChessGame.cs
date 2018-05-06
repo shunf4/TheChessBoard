@@ -138,7 +138,7 @@ namespace ChessDotNet
         public virtual bool HandleSpecialPgnMove(string move, Player player) { return false;  } 
 
         protected bool fiftyMoves = false;
-        protected virtual bool FiftyMovesAndThisCanResultInDraw { get { return fiftyMoves; } }
+        public virtual bool FiftyMovesAndThisCanResultInDraw { get { return fiftyMoves; } }
 
         public bool careWhoseTurnItIs = true;
 
@@ -874,7 +874,7 @@ namespace ChessDotNet
             WhoseTurn = ChessUtilities.GetOpponentOf(move.Player);
             if(!probing && move is MoreDetailedMove m)
             {
-                var mNew = new MoreDetailedMove(move, movingPiece, isCapture, castle, captured, isEnpassant, IsInCheck(WhoseTurn), IsCheckmated(WhoseTurn));
+                var mNew = new MoreDetailedMove(move, movingPiece, isCapture, castle, captured, isEnpassant, IsInCheck(WhoseTurn, false), IsCheckmated(WhoseTurn, false));
                 bool twoMovesEqual = mNew.Equals(m);
                 if (!twoMovesEqual)
                 {
@@ -971,16 +971,21 @@ namespace ChessDotNet
 
         protected Cache<bool> inCheckCacheWhite = new Cache<bool>(false, -1);
         protected Cache<bool> inCheckCacheBlack = new Cache<bool>(false, -1);
-        public virtual bool IsInCheck(Player player)
+        public virtual bool IsInCheck(Player player, bool useCache = true)
         {
             if (player == Player.None)
             {
                 throw new ArgumentException("IsInCheck: Player.None is an invalid argument.");
             }
+
             Cache<bool> cache = player == Player.White ? inCheckCacheWhite : inCheckCacheBlack;
-            if (cache.CachedAt == Moves.Count)
+
+            if (useCache)
             {
-                return cache.Value;
+                if (cache.CachedAt == Moves.Count)
+                {
+                    return cache.Value;
+                }
             }
 
             Position kingPos = new Position(File.None, -1);
@@ -1040,12 +1045,15 @@ namespace ChessDotNet
 
         protected Cache<bool> checkmatedCacheWhite = new Cache<bool>(false, -1);
         protected Cache<bool> checkmatedCacheBlack = new Cache<bool>(false, -1);
-        public virtual bool IsCheckmated(Player player)
+        public virtual bool IsCheckmated(Player player, bool useCache = true)
         {
             Cache<bool> cache = player == Player.White ? checkmatedCacheWhite : checkmatedCacheBlack;
-            if (cache.CachedAt == Moves.Count)
+            if (useCache)
             {
-                return cache.Value;
+                if (cache.CachedAt == Moves.Count)
+                {
+                    return cache.Value;
+                }
             }
 
             return cache.UpdateCache(IsInCheck(player) && !HasAnyValidMoves(player), Moves.Count);
