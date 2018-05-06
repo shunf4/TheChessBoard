@@ -75,6 +75,7 @@ namespace ChessDotNet
             { 'P', new Pawn(Player.White) },
             { 'p', new Pawn(Player.Black) },
         };
+
         protected virtual Dictionary<char, Piece> FenMappings
         {
             get
@@ -139,7 +140,7 @@ namespace ChessDotNet
         protected bool fiftyMoves = false;
         protected virtual bool FiftyMovesAndThisCanResultInDraw { get { return fiftyMoves; } }
 
-        protected bool careWhoseTurnItIs = true;
+        public bool careWhoseTurnItIs = true;
 
         public virtual bool DrawCanBeClaimed
         {
@@ -203,12 +204,12 @@ namespace ChessDotNet
             return CloneBoard(Board);
         }
 
-        List<DetailedMove> _moves = new List<DetailedMove>();
-        public ReadOnlyCollection<DetailedMove> Moves
+        List<MoreDetailedMove> _moves = new List<MoreDetailedMove>();
+        public ReadOnlyCollection<MoreDetailedMove> Moves
         {
             get
             {
-                return new ReadOnlyCollection<DetailedMove>(_moves);
+                return new ReadOnlyCollection<MoreDetailedMove>(_moves);
             }
             protected set
             {
@@ -263,7 +264,7 @@ namespace ChessDotNet
         public ChessGame()
         {
             WhoseTurn = Player.White;
-            _moves = new List<DetailedMove>();
+            _moves = new List<MoreDetailedMove>();
             Board = new Piece[8][];
             Piece kw = FenMappings['K'];
             Piece kb = FenMappings['k'];
@@ -321,11 +322,33 @@ namespace ChessDotNet
             UseGameCreationData(data);
         }
 
+        public ChessGame(ChessGame game)
+        {
+            GameCreationData gcd = new GameCreationData();
+            gcd.Board = game.Board;
+            gcd.CanWhiteCastleKingSide = game.CanWhiteCastleKingSide;
+            gcd.CanWhiteCastleQueenSide = game.CanWhiteCastleQueenSide;
+            gcd.CanBlackCastleKingSide = game.CanBlackCastleKingSide;
+            gcd.CanBlackCastleQueenSide = game.CanBlackCastleQueenSide;
+            gcd.EnPassant = null;
+            if (game._moves.Count > 0)
+            {
+                DetailedMove last = game._moves.Last();
+                if (last.Piece is Pawn && new PositionDistance(last.OriginalPosition, last.NewPosition).DistanceY == 2)
+                {
+                    gcd.EnPassant = new Position(last.NewPosition.File, last.Player == Player.White ? 3 : 6);
+                }
+            }
+            gcd.HalfMoveClock = game.i_halfMoveClock;
+            gcd.FullMoveNumber = game.i_fullMoveNumber;
+            UseGameCreationData(gcd);
+        }
+
         [Obsolete("This constructor is obsolete, use ChessGame(GameCreationData) instead.")]
         public ChessGame(Piece[][] board, Player whoseTurn)
         {
             Board = CloneBoard(board);
-            _moves = new List<DetailedMove>();
+            _moves = new List<MoreDetailedMove>();
             WhoseTurn = whoseTurn;
             Piece e1 = GetPieceAt(File.E, 1);
             Piece e8 = GetPieceAt(File.E, 8);
@@ -385,12 +408,21 @@ namespace ChessDotNet
 
             if (!data.Moves.Any() && data.EnPassant != null)
             {
-                DetailedMove latestMove = new DetailedMove(new Move(new Position(data.EnPassant.File, data.WhoseTurn == Player.White ? 7 : 2),
+                Move primMove = new Move(new Position(data.EnPassant.File, data.WhoseTurn == Player.White ? 7 : 2),
                         new Position(data.EnPassant.File, data.WhoseTurn == Player.White ? 5 : 4),
-                        ChessUtilities.GetOpponentOf(data.WhoseTurn)),
+                        ChessUtilities.GetOpponentOf(data.WhoseTurn));
+                bool causeCheck;
+                bool causeCheckmate;
+                WouldBeInCheckOrCheckmatedAfter(primMove, data.WhoseTurn, out causeCheck, out causeCheckmate);
+                MoreDetailedMove latestMove = new MoreDetailedMove(primMove,
                     new Pawn(ChessUtilities.GetOpponentOf(data.WhoseTurn)),
                     false,
-                    CastlingType.None);
+                    CastlingType.None,
+                    new Pawn(data.WhoseTurn),
+                    true,
+                    causeCheck,
+                    causeCheckmate
+                    );
                 _moves.Add(latestMove);
             }
             else
@@ -663,6 +695,12 @@ namespace ChessDotNet
             {
                 return false;
             }
+            else if(move is MoreDetailedMove m)
+                if (pieceAtDestination != null && pieceAtDestination.Owner == ChessUtilities.GetOpponentOf(move.Player))
+                {
+                    m.IsCapture = true;
+                    m.CapturedPiece = pieceAtDestination;
+                }
             if (!piece.IsValidMove(move, this))
             {
                 return false;
@@ -733,7 +771,7 @@ namespace ChessDotNet
             return ApplyMove(move, alreadyValidated, out captured);
         }
 
-        public virtual MoveType ApplyMove(Move move, bool alreadyValidated, out Piece captured)
+        public virtual MoveType ApplyMove(Move move, bool alreadyValidated, out Piece captured, bool probing = false)
         {
             ChessUtilities.ThrowIfNull(move, "move");
             captured = null;
@@ -746,6 +784,7 @@ namespace ChessDotNet
             Piece newPiece = movingPiece;
             bool isCapture = capturedPiece != null;
             CastlingType castle = CastlingType.None;
+            bool isEnpassant = false;
             if (movingPiece is Pawn)
             {
                 i_halfMoveClock = 0;
@@ -753,6 +792,7 @@ namespace ChessDotNet
                 if (pd.DistanceX == 1 && pd.DistanceY == 1 && GetPieceAt(move.NewPosition) == null)
                 { // en passant
                     isCapture = true;
+                    isEnpassant = true;
                     captured = GetPieceAt(move.NewPosition.File, move.OriginalPosition.Rank);
                     SetPieceAt(move.NewPosition.File, move.OriginalPosition.Rank, null);
                 }
@@ -832,48 +872,59 @@ namespace ChessDotNet
                 SetPieceAt(move.OriginalPosition.File, move.OriginalPosition.Rank, null);
             }
             WhoseTurn = ChessUtilities.GetOpponentOf(move.Player);
-            AddDetailedMove(new DetailedMove(move, movingPiece, isCapture, castle));
+            if(!probing && move is MoreDetailedMove m)
+            {
+                var mNew = new MoreDetailedMove(move, movingPiece, isCapture, castle, captured, isEnpassant, IsInCheck(WhoseTurn), IsCheckmated(WhoseTurn));
+                bool twoMovesEqual = mNew.Equals(m);
+                if (!twoMovesEqual)
+                {
+                    throw new Exception("Two MoreDetailedMove differ.");
+                }
+                AddMoreDetailedMove(m);
+            }
+            else
+                AddMoreDetailedMove(new MoreDetailedMove(move, movingPiece, isCapture, castle, captured, isEnpassant, IsInCheck(WhoseTurn), IsCheckmated(WhoseTurn)));
             return type;
         }
 
-        protected virtual void AddDetailedMove(DetailedMove dm)
+        protected virtual void AddMoreDetailedMove(MoreDetailedMove dm)
         {
             _moves.Add(dm);
         }
 
-        public ReadOnlyCollection<Move> GetValidMoves(Position from)
+        public ReadOnlyCollection<MoreDetailedMove> GetValidMoves(Position from)
         {
             ChessUtilities.ThrowIfNull(from, "from");
             return GetValidMoves(from, false);
         }
 
-        public virtual ReadOnlyCollection<Move> GetValidMoves(Position from, bool returnIfAny)
+        public virtual ReadOnlyCollection<MoreDetailedMove> GetValidMoves(Position from, bool returnIfAny)
         {
             return GetValidMoves(from, returnIfAny, careWhoseTurnItIs);
         }
 
-        public virtual ReadOnlyCollection<Move> GetValidMoves(Position from, bool returnIfAny, bool careAboutWhoseTurnItIs)
+        public virtual ReadOnlyCollection<MoreDetailedMove> GetValidMoves(Position from, bool returnIfAny, bool careAboutWhoseTurnItIs)
         {
             ChessUtilities.ThrowIfNull(from, "from");
             Piece piece = GetPieceAt(from);
-            if (piece == null || (careAboutWhoseTurnItIs && piece.Owner != WhoseTurn)) return new ReadOnlyCollection<Move>(new List<Move>());
+            if (piece == null || (careAboutWhoseTurnItIs && piece.Owner != WhoseTurn)) return new ReadOnlyCollection<MoreDetailedMove>(new List<MoreDetailedMove>());
             return piece.GetValidMoves(from, returnIfAny, this, IsValidMove);
         }
 
-        public ReadOnlyCollection<Move> GetValidMoves(Player player)
+        public ReadOnlyCollection<MoreDetailedMove> GetValidMoves(Player player)
         {
             return GetValidMoves(player, false);
         }
 
-        public virtual ReadOnlyCollection<Move> GetValidMoves(Player player, bool returnIfAny)
+        public virtual ReadOnlyCollection<MoreDetailedMove> GetValidMoves(Player player, bool returnIfAny)
         {
             return GetValidMoves(player, returnIfAny, careWhoseTurnItIs);
         }
 
-        public virtual ReadOnlyCollection<Move> GetValidMoves(Player player, bool returnIfAny, bool careAboutWhoseTurnItIs)
+        public virtual ReadOnlyCollection<MoreDetailedMove> GetValidMoves(Player player, bool returnIfAny, bool careAboutWhoseTurnItIs)
         {
-            if (careAboutWhoseTurnItIs && player != WhoseTurn) return new ReadOnlyCollection<Move>(new List<Move>());
-            List<Move> validMoves = new List<Move>();
+            if (careAboutWhoseTurnItIs && player != WhoseTurn) return new ReadOnlyCollection<MoreDetailedMove>(new List<MoreDetailedMove>());
+            List<MoreDetailedMove> validMoves = new List<MoreDetailedMove>();
             for (int r = 1; r <= Board.Length; r++)
             {
                 for (int f = 0; f < Board[8 - r].Length; f++)
@@ -884,37 +935,37 @@ namespace ChessDotNet
                         validMoves.AddRange(GetValidMoves(new Position((File)f, r), returnIfAny));
                         if (returnIfAny && validMoves.Count > 0)
                         {
-                            return new ReadOnlyCollection<Move>(validMoves);
+                            return new ReadOnlyCollection<MoreDetailedMove>(validMoves);
                         }
                     }
                 }
             }
-            return new ReadOnlyCollection<Move>(validMoves);
+            return new ReadOnlyCollection<MoreDetailedMove>(validMoves);
         }
 
         public virtual bool HasAnyValidMoves(Position from)
         {
             ChessUtilities.ThrowIfNull(from, "from");
-            ReadOnlyCollection<Move> validMoves = GetValidMoves(from, true);
+            ReadOnlyCollection<MoreDetailedMove> validMoves = GetValidMoves(from, true);
             return validMoves.Count > 0;
         }
 
         public virtual bool HasAnyValidMoves(Position from, bool careAboutWhoseTurnItIs)
         {
             ChessUtilities.ThrowIfNull(from, "from");
-            ReadOnlyCollection<Move> validMoves = GetValidMoves(from, true, careAboutWhoseTurnItIs);
+            ReadOnlyCollection<MoreDetailedMove> validMoves = GetValidMoves(from, true, careAboutWhoseTurnItIs);
             return validMoves.Count > 0;
         }
 
         public virtual bool HasAnyValidMoves(Player player)
         {
-            ReadOnlyCollection<Move> validMoves = GetValidMoves(player, true);
+            ReadOnlyCollection<MoreDetailedMove> validMoves = GetValidMoves(player, true);
             return validMoves.Count > 0;
         }
 
         public virtual bool HasAnyValidMoves(Player player, bool careAboutWhoseTurnItIs)
         {
-            ReadOnlyCollection<Move> validMoves = GetValidMoves(player, true, careAboutWhoseTurnItIs);
+            ReadOnlyCollection<MoreDetailedMove> validMoves = GetValidMoves(player, true, careAboutWhoseTurnItIs);
             return validMoves.Count > 0;
         }
 
@@ -1055,10 +1106,38 @@ namespace ChessDotNet
             gcd.HalfMoveClock = i_halfMoveClock;
             gcd.FullMoveNumber = i_fullMoveNumber;
             ChessGame copy = new ChessGame(gcd);
+            // 无法处理该落子后出现兵晋升的情况
             Piece p = copy.GetPieceAt(move.OriginalPosition);
             copy.SetPieceAt(move.OriginalPosition.File, move.OriginalPosition.Rank, null);
             copy.SetPieceAt(move.NewPosition.File, move.NewPosition.Rank, p);
             return copy.IsInCheck(player);
+        }
+
+        public virtual void WouldBeInCheckOrCheckmatedAfter(Move move, Player player, out bool inCheck, out bool checkmated)
+        {
+            ChessUtilities.ThrowIfNull(move, "move");
+            GameCreationData gcd = new GameCreationData();
+            gcd.Board = Board;
+            gcd.CanWhiteCastleKingSide = CanWhiteCastleKingSide;
+            gcd.CanWhiteCastleQueenSide = CanWhiteCastleQueenSide;
+            gcd.CanBlackCastleKingSide = CanBlackCastleKingSide;
+            gcd.CanBlackCastleQueenSide = CanBlackCastleQueenSide;
+            gcd.EnPassant = null;
+            if (_moves.Count > 0)
+            {
+                DetailedMove last = _moves.Last();
+                if (last.Piece is Pawn && new PositionDistance(last.OriginalPosition, last.NewPosition).DistanceY == 2)
+                {
+                    gcd.EnPassant = new Position(last.NewPosition.File, last.Player == Player.White ? 3 : 6);
+                }
+            }
+            gcd.HalfMoveClock = i_halfMoveClock;
+            gcd.FullMoveNumber = i_fullMoveNumber;
+            ChessGame copy = new ChessGame(gcd);
+            copy.ApplyMove(move, false, out Piece captured, true);
+
+            inCheck = copy.IsInCheck(player);
+            checkmated = copy.IsCheckmated(player);
         }
 
         public void ClaimDraw(string reason)

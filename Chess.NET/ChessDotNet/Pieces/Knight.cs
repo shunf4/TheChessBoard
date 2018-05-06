@@ -61,9 +61,9 @@ namespace ChessDotNet.Pieces
             return true;
         }
 
-        public override ReadOnlyCollection<Move> GetValidMoves(Position from, bool returnIfAny, ChessGame game, Func<Move, bool> gameMoveValidator)
+        public override ReadOnlyCollection<MoreDetailedMove> GetValidMoves(Position from, bool returnIfAny, ChessGame game, Func<Move, bool> gameMoveValidator)
         {
-            List<Move> validMoves = new List<Move>();
+            List<MoreDetailedMove> validMoves = new List<MoreDetailedMove>();
             Piece piece = game.GetPieceAt(from);
             int l0 = game.BoardHeight;
             int l1 = game.BoardWidth;
@@ -74,15 +74,22 @@ namespace ChessDotNet.Pieces
                 if ((int)from.File + dir[0] < 0 || (int)from.File + dir[0] >= l1
                     || from.Rank + dir[1] < 1 || from.Rank + dir[1] > l0)
                     continue;
-                Move move = new Move(from, new Position(from.File + dir[0], from.Rank + dir[1]), piece.Owner);
+                MoreDetailedMove move = new MoreDetailedMove(from, new Position(from.File + dir[0], from.Rank + dir[1]), piece.Owner, null, piece, false, CastlingType.None, null, false, false, false);
                 if (gameMoveValidator(move))
                 {
+                    move.Promotion = null;
+                    move.Castling = CastlingType.None;
+                    game.WouldBeInCheckOrCheckmatedAfter(move, ChessUtilities.GetOpponentOf(move.Player), out bool inCheck, out bool checkmated);
+                    move.IsChecking = inCheck;
+                    move.IsCheckmate = checkmated;
+                    move.AssociatedGame = game;
+
                     validMoves.Add(move);
                     if (returnIfAny)
-                        return new ReadOnlyCollection<Move>(validMoves);
+                        return new ReadOnlyCollection<MoreDetailedMove>(validMoves);
                 }
             }
-            return new ReadOnlyCollection<Move>(validMoves);
+            return new ReadOnlyCollection<MoreDetailedMove>(validMoves);
         }
     }
 }

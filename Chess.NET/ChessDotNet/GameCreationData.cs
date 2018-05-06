@@ -8,11 +8,11 @@ namespace ChessDotNet
             set;
         }
 
-        public DetailedMove[] Moves
+        public MoreDetailedMove[] Moves
         {
             get;
             set;
-        } = new DetailedMove[] {};
+        } = new MoreDetailedMove[] {};
 
         public bool DrawClaimed
         {

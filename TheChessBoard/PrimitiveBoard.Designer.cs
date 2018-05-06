@@ -39,6 +39,8 @@ namespace TheChessBoard
             this.panel1 = new System.Windows.Forms.Panel();
             this.label1 = new System.Windows.Forms.Label();
             this.panel2 = new System.Windows.Forms.Panel();
+            this.ckbDontCareWhoseTurnItIs = new System.Windows.Forms.CheckBox();
+            this.lblCurrentPlayer = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             this.panel1.SuspendLayout();
             this.panel2.SuspendLayout();
@@ -66,7 +68,7 @@ namespace TheChessBoard
             // 
             // btnMove
             // 
-            this.btnMove.Location = new System.Drawing.Point(458, 614);
+            this.btnMove.Location = new System.Drawing.Point(458, 640);
             this.btnMove.Name = "btnMove";
             this.btnMove.Size = new System.Drawing.Size(91, 30);
             this.btnMove.TabIndex = 15;
@@ -78,7 +80,7 @@ namespace TheChessBoard
             // 
             this.txbMoveStr.Location = new System.Drawing.Point(77, 16);
             this.txbMoveStr.Name = "txbMoveStr";
-            this.txbMoveStr.Size = new System.Drawing.Size(98, 25);
+            this.txbMoveStr.Size = new System.Drawing.Size(98, 27);
             this.txbMoveStr.TabIndex = 0;
             // 
             // rdbWhite
@@ -91,7 +93,7 @@ namespace TheChessBoard
             this.rdbWhite.TabStop = true;
             this.rdbWhite.Text = "白方(&W)";
             this.rdbWhite.UseVisualStyleBackColor = true;
-            this.rdbWhite.CheckedChanged += new System.EventHandler(this.playerCheckedChanged);
+            this.rdbWhite.CheckedChanged += new System.EventHandler(this.SANPlayerChanged);
             // 
             // rdbBlack
             // 
@@ -106,7 +108,7 @@ namespace TheChessBoard
             // 
             this.groupBox1.Controls.Add(this.rdbWhite);
             this.groupBox1.Controls.Add(this.rdbBlack);
-            this.groupBox1.Location = new System.Drawing.Point(220, 573);
+            this.groupBox1.Location = new System.Drawing.Point(220, 599);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Size = new System.Drawing.Size(217, 105);
             this.groupBox1.TabIndex = 7;
@@ -115,7 +117,7 @@ namespace TheChessBoard
             // 
             // pnlBoard
             // 
-            this.pnlBoard.Location = new System.Drawing.Point(8, 19);
+            this.pnlBoard.Location = new System.Drawing.Point(8, 45);
             this.pnlBoard.Name = "pnlBoard";
             this.pnlBoard.Size = new System.Drawing.Size(552, 536);
             this.pnlBoard.TabIndex = 8;
@@ -124,7 +126,7 @@ namespace TheChessBoard
             // 
             this.panel1.Controls.Add(this.label1);
             this.panel1.Controls.Add(this.txbMoveStr);
-            this.panel1.Location = new System.Drawing.Point(8, 598);
+            this.panel1.Location = new System.Drawing.Point(8, 624);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(192, 59);
             this.panel1.TabIndex = 16;
@@ -132,31 +134,53 @@ namespace TheChessBoard
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(8, 20);
+            this.label1.Location = new System.Drawing.Point(3, 19);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(61, 15);
+            this.label1.Size = new System.Drawing.Size(71, 20);
             this.label1.TabIndex = 1;
-            this.label1.Text = "输入SAN";
+            this.label1.Text = "输入S&AN";
             this.label1.Click += new System.EventHandler(this.label1_Click);
             // 
             // panel2
             // 
+            this.panel2.Controls.Add(this.ckbDontCareWhoseTurnItIs);
+            this.panel2.Controls.Add(this.lblCurrentPlayer);
             this.panel2.Controls.Add(this.btnMove);
             this.panel2.Controls.Add(this.groupBox1);
             this.panel2.Controls.Add(this.panel1);
             this.panel2.Controls.Add(this.pnlBoard);
             this.panel2.Location = new System.Drawing.Point(342, 12);
             this.panel2.Name = "panel2";
-            this.panel2.Size = new System.Drawing.Size(567, 693);
+            this.panel2.Size = new System.Drawing.Size(567, 720);
             this.panel2.TabIndex = 17;
+            // 
+            // ckbDontCareWhoseTurnItIs
+            // 
+            this.ckbDontCareWhoseTurnItIs.AutoSize = true;
+            this.ckbDontCareWhoseTurnItIs.Location = new System.Drawing.Point(384, 12);
+            this.ckbDontCareWhoseTurnItIs.Name = "ckbDontCareWhoseTurnItIs";
+            this.ckbDontCareWhoseTurnItIs.Size = new System.Drawing.Size(135, 24);
+            this.ckbDontCareWhoseTurnItIs.TabIndex = 18;
+            this.ckbDontCareWhoseTurnItIs.Text = "忽略当前执棋(&I)";
+            this.ckbDontCareWhoseTurnItIs.UseVisualStyleBackColor = true;
+            this.ckbDontCareWhoseTurnItIs.CheckedChanged += new System.EventHandler(this.ckbDontCareWhoseTurnItIs_CheckedChanged);
+            // 
+            // lblCurrentPlayer
+            // 
+            this.lblCurrentPlayer.Location = new System.Drawing.Point(233, 13);
+            this.lblCurrentPlayer.Name = "lblCurrentPlayer";
+            this.lblCurrentPlayer.Size = new System.Drawing.Size(107, 23);
+            this.lblCurrentPlayer.TabIndex = 17;
+            this.lblCurrentPlayer.Text = "当前执棋：";
             // 
             // PrimitiveBoard
             // 
             this.AcceptButton = this.btnMove;
-            this.ClientSize = new System.Drawing.Size(925, 717);
+            this.ClientSize = new System.Drawing.Size(925, 744);
             this.Controls.Add(this.btnBlackReadLine);
             this.Controls.Add(this.btnWhiteReadLine);
             this.Controls.Add(this.panel2);
+            this.Font = new System.Drawing.Font("微软雅黑", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
             this.Name = "PrimitiveBoard";
@@ -166,6 +190,7 @@ namespace TheChessBoard
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
             this.panel2.ResumeLayout(false);
+            this.panel2.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -182,5 +207,7 @@ namespace TheChessBoard
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Panel panel2;
+        private System.Windows.Forms.CheckBox ckbDontCareWhoseTurnItIs;
+        private System.Windows.Forms.Label lblCurrentPlayer;
     }
 }

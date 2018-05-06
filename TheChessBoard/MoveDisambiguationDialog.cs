@@ -12,13 +12,15 @@ using ChessDotNet;
 
 namespace TheChessBoard
 {
-    public delegate void DisambiguationCallbackHandler(DetailedMove detailedMove);
+    public delegate void DisambiguationCallbackHandler(MoreDetailedMove detailedMove);
 
     public partial class MoveDisambiguationDialog : Form
     {
         public event DisambiguationCallbackHandler CallbackEvent;
-        List<DetailedMove> Moves;
-        public MoveDisambiguationDialog(List<DetailedMove> moves)
+
+        List<MoreDetailedMove> Moves;
+        
+        public MoveDisambiguationDialog(List<MoreDetailedMove> moves)
         {
             InitializeComponent();
             Moves = moves;
@@ -42,7 +44,11 @@ namespace TheChessBoard
             dgvMoves.AutoGenerateColumns = false;
             dgvMoves.DataSource = Moves;
             dgvMoves.Select();
+            dgvMoves.MultiSelect = false;
+            dgvMoves.CellMouseDoubleClick += (sender, e) => { this.BeginInvoke(new EventHandler(btnConfirm_Click)); };
         }
+
+
 
         private void btnCancel_Click(object sender, EventArgs e)
         {
@@ -51,11 +57,8 @@ namespace TheChessBoard
 
         private void btnConfirm_Click(object sender, EventArgs e)
         {
-            if(CallbackEvent != null)
-            {
-                CallbackEvent.Invoke(Moves[dgvMoves.CurrentRow.Index]);
-            }
             this.Close();
+            CallbackEvent?.Invoke(Moves[dgvMoves.CurrentRow.Index]);
         }
     }
 }

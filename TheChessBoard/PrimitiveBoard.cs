@@ -27,7 +27,7 @@ namespace TheChessBoard
         StdIOGame FormGame;
         ChessDotNet.Player currentPlayer;
         Position SelectedPosition;
-        Dictionary<Button, List<DetailedMove>> DestinationMoves;
+        Dictionary<Button, List<MoreDetailedMove>> DestinationMoves;
 
         Piece pieceJustCaptured;
 
@@ -61,7 +61,8 @@ namespace TheChessBoard
                     bs.TabIndex = 20;
                     bs.TabStop = false;
                     bs.Text = "+";
-                    bs.Font = new Font("Chess Leipzig", 44F, FontStyle.Regular, GraphicsUnit.Point, ((byte)(2)));
+                    bs.Font = new Font("Chess Leipzig", 36F, FontStyle.Regular, GraphicsUnit.Point, ((byte)(2)));
+
                     bs.Margin = new Padding(0,0,0,0);
                     bs.Padding = new Padding(0,0,0,0);
                     bs.UseVisualStyleBackColor = true;
@@ -75,7 +76,8 @@ namespace TheChessBoard
             
             this.pnlBoard.ResumeLayout(false);
             this.pnlBoard.PerformLayout();
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -83,11 +85,10 @@ namespace TheChessBoard
 
         private void PrimitiveBoard_Load(object sender, EventArgs e)
         {
-            FormGame.PropertyChanged += FormGamePropertyChangedSubscriber_UpdateBoardButtons;
-            playerCheckedChanged(null, null);
-            UpdateBoardButtons(FormGame.BoardPrint);
-            
-            DestinationMoves = new Dictionary<Button, List<DetailedMove>>();
+            FormGame.PropertyChanged += FormGamePropertyChangedSubscriber_UpdateUI;
+            FormGamePropertyChangedSubscriber_UpdateUI(null, null);
+            SANPlayerChanged(null, null);
+            DestinationMoves = new Dictionary<Button, List<MoreDetailedMove>>();
         }
 
         private void btnMove_Click(object sender, EventArgs e)
@@ -103,9 +104,10 @@ namespace TheChessBoard
             {
                 MessageBox.Show("SAN 出现解析错误 : " + exception.Message, "SAN 输入错误", MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, 0);
             }
+            SquareCancelSelect();
         }
 
-        private void playerCheckedChanged(object sender, EventArgs e)
+        private void SANPlayerChanged(object sender, EventArgs e)
         {
             if(rdbBlack.Checked)
             {
@@ -117,21 +119,67 @@ namespace TheChessBoard
             }
         }
 
-        void FormGamePropertyChangedSubscriber_UpdateBoardButtons(object sender, PropertyChangedEventArgs e)
+        private void ckbDontCareWhoseTurnItIs_CheckedChanged(object sender, EventArgs e)
         {
-            if (e.PropertyName == "BoardPrint")
+            FormGame.CareWhoseTurnItIs = !ckbDontCareWhoseTurnItIs.Checked;
+            if(FormGame.CareWhoseTurnItIs)
+                DelimitSANPlayerIfNeeded();
+            else
             {
-                var bp = FormGame.BoardPrint;
-                UpdateBoardButtons(bp);
+                rdbBlack.Enabled = true;
+                rdbWhite.Enabled = true;
+            }
+            SquareCancelSelect();
+        }
+
+        private void DelimitSANPlayerIfNeeded()
+        {
+            if(FormGame.CareWhoseTurnItIs)
+            {
+                if(FormGame.WhoseTurn == Player.Black)
+                {
+                    rdbBlack.Enabled = true;
+                    rdbBlack.Checked = true;
+                    rdbWhite.Enabled = false;
+                    rdbWhite.Checked = false;
+                }
+                else
+                {
+                    rdbBlack.Enabled = !true;
+                    rdbBlack.Checked = !true;
+                    rdbWhite.Enabled = !false;
+                    rdbWhite.Checked = !false;
+                }
             }
         }
 
-        public void UpdateBoardButtons(char[] BoardPrint)
-        {  
-            for(var i = 0; i < BoardPrint.Length; i++)
+        void FormGamePropertyChangedSubscriber_UpdateUI(object sender, PropertyChangedEventArgs e)
+        {
+            
+            if (e == null || e.PropertyName == "BoardPrint")
             {
-                btnBoardSquares[i].Text = BoardPrint[i].ToString();
+                UpdateBoardButtons();
             }
+            if (e == null || e.PropertyName == "WhoseTurn")
+            {
+                UpdateWhoseTurn();
+            }
+        }
+
+        public void UpdateBoardButtons()
+        {
+            var bp = FormGame.BoardPrint;
+            for (var i = 0; i < bp.Length; i++)
+            {
+                btnBoardSquares[i].Text = bp[i].ToString();
+            }
+        }
+
+        public void UpdateWhoseTurn()
+        {
+            var wt = FormGame.WhoseTurn;
+            lblCurrentPlayer.Text = "当前执棋：" + (wt == Player.White ? "白" : "黑");
+            DelimitSANPlayerIfNeeded();
         }
 
         private void label1_Click(object sender, EventArgs e)
@@ -161,8 +209,8 @@ namespace TheChessBoard
                     return;
                 if (DestinationMoves.Count == 1)
                     return;
-                var DestinationMovesCopy = new Dictionary<Button, List<DetailedMove>>(DestinationMoves);
-                var aggregateResult = DestinationMovesCopy.Aggregate((a, b) => { return new KeyValuePair<Button, List<DetailedMove>>(a.Key, a.Value.Union(b.Value).ToList()); });
+                var DestinationMovesCopy = new Dictionary<Button, List<MoreDetailedMove>>(DestinationMoves);
+                var aggregateResult = DestinationMovesCopy.Aggregate((a, b) => { return new KeyValuePair<Button, List<MoreDetailedMove>>(a.Key, a.Value.Union(b.Value).ToList()); });
 
                 MoveDisambiguationDialog disaDialog = new MoveDisambiguationDialog(aggregateResult.Value);
                 disaDialog.CallbackEvent += DisambiguationDone;
@@ -170,9 +218,14 @@ namespace TheChessBoard
             }
         }
 
-        void DisambiguationDone(DetailedMove move)
+        void DisambiguationDone(MoreDetailedMove move)
         {
             FormGame.ApplyMove(move, true, out pieceJustCaptured);
+            SquareCancelSelect();
+        }
+
+        void SquareCancelSelect()
+        {
             FormGame.StdIOGameStatus = StdIOGameStatus.Idle;
             CleanSquareColor();
         }
@@ -188,8 +241,7 @@ namespace TheChessBoard
                 bool moveSelect = DestinationMoves.ContainsKey(clickedButton) && allowMoveSelect;
                 if (cancelSelect)
                 {
-                    FormGame.StdIOGameStatus = StdIOGameStatus.Idle;
-                    CleanSquareColor();
+                    SquareCancelSelect();
                 }
 
                 if (moveSelect)
@@ -227,18 +279,21 @@ namespace TheChessBoard
 
                     foreach (var move in validMoves)
                     {
-                        var detailMove = new DetailedMove(move, piece, false, CastlingType.None);
                         var currButton = btnBoardSquares[(8 - move.NewPosition.Rank) * 8 + (int)move.NewPosition.File];
                         currButton.BackColor = ButtonSquareAvailableColor;
                         if(DestinationMoves.ContainsKey(currButton))
                         {
-                            DestinationMoves[currButton].Add(detailMove);
+                            DestinationMoves[currButton].Add(move);
                         }
                         else
-                            DestinationMoves.Add(currButton, new List<DetailedMove> { detailMove });
+                            DestinationMoves.Add(currButton, new List<MoreDetailedMove> { move });
                     }
                     clickedButton.BackColor = ButtonSquareSelectedColor;
                     return true;
+                }
+                else
+                {
+                    SquareCancelSelect();
                 }
             }
             return false;
@@ -250,5 +305,6 @@ namespace TheChessBoard
                 bs.BackColor = ButtonSquareColor;
         }
 
+        
     }
 }

@@ -23,6 +23,8 @@ namespace TheChessBoard
         Running
     }
 
+    public delegate void AppliedMoveEventHandler();
+
     public class StdIOGame : INotifyPropertyChanged
     {
         #region INotifyPropertyChanged 成员
@@ -33,6 +35,9 @@ namespace TheChessBoard
         }
         #endregion
 
+
+        public AppliedMoveEventHandler AppliedMove;
+
         StdIOHandler plyWhiteIO;
         StdIOHandler plyBlackIO;
 
@@ -40,6 +45,27 @@ namespace TheChessBoard
 
 
         public ChessGame Game;
+
+        public bool CareWhoseTurnItIs
+        {
+            get
+            {
+                return Game.careWhoseTurnItIs;
+            }
+            set
+            {
+                Game.careWhoseTurnItIs = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        public Player WhoseTurn
+        {
+            get
+            {
+                return Game.WhoseTurn;
+            }
+        }
 
         private static readonly Dictionary<char, Piece> FenMappings = new Dictionary<char, Piece>()
         {
@@ -92,7 +118,7 @@ namespace TheChessBoard
                 DrawClaimed = false,
                 DrawReason = "",
                 WhoseTurn = Player.White,
-                careWhoseTurnItIs = false,
+                careWhoseTurnItIs = true,
                 CanWhiteCastleKingSide = true,
                 CanWhiteCastleQueenSide = true,
                 CanBlackCastleKingSide = true,
@@ -183,6 +209,8 @@ namespace TheChessBoard
         {
             Game.ApplyMove(move, alreadyValidated, out captured);
             NotifyPropertyChanged("BoardPrint");
+            NotifyPropertyChanged("WhoseTurn");
+            AppliedMove?.Invoke();
         }
 
 

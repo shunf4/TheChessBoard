@@ -124,9 +124,10 @@ namespace ChessDotNet.Pieces
             }
             if (checkEnPassant)
             {
-                ReadOnlyCollection<DetailedMove> _moves = game.Moves;
+                ReadOnlyCollection<MoreDetailedMove> _moves = game.Moves;
                 if (_moves.Count == 0)
                 {
+                    // 如果是导入的棋盘，这里有可能误判
                     return false;
                 }
                 if ((origin.Rank != 5 && Owner == Player.White)
@@ -153,14 +154,20 @@ namespace ChessDotNet.Pieces
                 }
                 if (destination.File != latestMove.NewPosition.File)
                     return false;
+                if (move is MoreDetailedMove m)
+                {
+                    m.IsEnpassant = true;
+                    m.IsCapture = true;
+                    m.CapturedPiece = game.GetPieceAt(latestMove.NewPosition);
+                }
             }
             return true;
         }
 
-        public override ReadOnlyCollection<Move> GetValidMoves(Position from, bool returnIfAny, ChessGame game, Func<Move, bool> gameMoveValidator)
+        public override ReadOnlyCollection<MoreDetailedMove> GetValidMoves(Position from, bool returnIfAny, ChessGame game, Func<Move, bool> gameMoveValidator)
         {
             ChessUtilities.ThrowIfNull(from, "from");
-            List<Move> validMoves = new List<Move>();
+            List<MoreDetailedMove> validMoves = new List<MoreDetailedMove>();
             Piece piece = game.GetPieceAt(from);
             int l0 = game.BoardHeight;
             int l1 = game.BoardWidth;
@@ -193,15 +200,22 @@ namespace ChessDotNet.Pieces
                 }
                 foreach (Move m in moves)
                 {
-                    if (gameMoveValidator(m))
+                    MoreDetailedMove mm = new MoreDetailedMove(m, piece, false, CastlingType.None, null, false, false, false);
+                    if (gameMoveValidator(mm))
                     {
-                        validMoves.Add(m);
+                        mm.Castling = CastlingType.None;
+                        game.WouldBeInCheckOrCheckmatedAfter(mm, ChessUtilities.GetOpponentOf(move.Player), out bool inCheck, out bool checkmated);
+                        mm.IsChecking = inCheck;
+                        mm.IsCheckmate = checkmated;
+                        mm.AssociatedGame = game;
+
+                        validMoves.Add(mm);
                         if (returnIfAny)
-                            return new ReadOnlyCollection<Move>(validMoves);
+                            return new ReadOnlyCollection<MoreDetailedMove>(validMoves);
                     }
                 }
             }
-            return new ReadOnlyCollection<Move>(validMoves);
+            return new ReadOnlyCollection<MoreDetailedMove>(validMoves);
         }
     }
 }

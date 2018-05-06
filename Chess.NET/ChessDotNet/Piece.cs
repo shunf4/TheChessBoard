@@ -58,6 +58,6 @@ namespace ChessDotNet
         public abstract char GetFenCharacter();
         public abstract string GetFriendlyName();
         public abstract bool IsValidMove(Move move, ChessGame game);
-        public abstract ReadOnlyCollection<Move> GetValidMoves(Position from, bool returnIfAny, ChessGame game, Func<Move, bool> gameMoveValidator);
+        public abstract ReadOnlyCollection<MoreDetailedMove> GetValidMoves(Position from, bool returnIfAny, ChessGame game, Func<Move, bool> gameMoveValidator);
     }
 }

@@ -23,7 +23,7 @@ namespace ChessDotNet
 
         protected DetailedMove() { }
 
-        public string FriendlyText
+        public virtual string FriendlyText
         {
             get
             {
@@ -33,20 +33,24 @@ namespace ChessDotNet
                 sb.Append(OriginalPosition.ToString());
                 sb.Append("到");
                 sb.Append(NewPosition.ToString());
-                if(Promotion.HasValue)
+                if (IsCapture)
+                {
+                    sb.Append(", 吃子");
+                }
+                if (Promotion.HasValue)
                 {
                     sb.Append(", 晋升为");
                     sb.Append(ChessGame.OriginalMapPgnCharToPiece(Promotion.Value, Piece.Owner).GetFriendlyName());
                 }
+                if(Castling.Equals(CastlingType.KingSide))
+                {
+                    sb.Append(", 王翼易位");
+                }
+                if (Castling.Equals(CastlingType.QueenSide))
+                {
+                    sb.Append(", 后翼易位");
+                }
                 return sb.ToString();
-            }
-        }
-
-        public string SANString
-        {
-            get
-            {
-                return "(not yet developed)";
             }
         }
 

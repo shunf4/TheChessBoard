@@ -38,9 +38,9 @@ namespace TheChessBoard
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(51, 46);
+            this.label1.Location = new System.Drawing.Point(41, 27);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(322, 15);
+            this.label1.Size = new System.Drawing.Size(324, 20);
             this.label1.TabIndex = 0;
             this.label1.Text = "您的选择动作对应多种落子方式。请选择一种：";
             // 
@@ -52,19 +52,21 @@ namespace TheChessBoard
             this.dgvMoves.AllowUserToResizeRows = false;
             this.dgvMoves.BackgroundColor = System.Drawing.SystemColors.ControlLight;
             this.dgvMoves.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvMoves.Location = new System.Drawing.Point(94, 104);
+            this.dgvMoves.Location = new System.Drawing.Point(45, 75);
             this.dgvMoves.Name = "dgvMoves";
             this.dgvMoves.ReadOnly = true;
+            this.dgvMoves.RowHeadersWidth = 25;
             this.dgvMoves.RowTemplate.Height = 27;
+            this.dgvMoves.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
             this.dgvMoves.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dgvMoves.Size = new System.Drawing.Size(532, 264);
+            this.dgvMoves.Size = new System.Drawing.Size(386, 264);
             this.dgvMoves.TabIndex = 3;
             // 
             // btnConfirm
             // 
-            this.btnConfirm.Location = new System.Drawing.Point(123, 413);
+            this.btnConfirm.Location = new System.Drawing.Point(229, 362);
             this.btnConfirm.Name = "btnConfirm";
-            this.btnConfirm.Size = new System.Drawing.Size(89, 41);
+            this.btnConfirm.Size = new System.Drawing.Size(89, 32);
             this.btnConfirm.TabIndex = 4;
             this.btnConfirm.Text = "确定(&O)";
             this.btnConfirm.UseVisualStyleBackColor = true;
@@ -72,9 +74,10 @@ namespace TheChessBoard
             // 
             // btnCancel
             // 
-            this.btnCancel.Location = new System.Drawing.Point(514, 413);
+            this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
+            this.btnCancel.Location = new System.Drawing.Point(341, 362);
             this.btnCancel.Name = "btnCancel";
-            this.btnCancel.Size = new System.Drawing.Size(89, 41);
+            this.btnCancel.Size = new System.Drawing.Size(90, 32);
             this.btnCancel.TabIndex = 5;
             this.btnCancel.Text = "取消(&C)";
             this.btnCancel.UseVisualStyleBackColor = true;
@@ -82,13 +85,15 @@ namespace TheChessBoard
             // 
             // MoveDisambiguationDialog
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(718, 494);
+            this.AcceptButton = this.btnConfirm;
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
+            this.CancelButton = this.btnCancel;
+            this.ClientSize = new System.Drawing.Size(479, 416);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnConfirm);
             this.Controls.Add(this.dgvMoves);
             this.Controls.Add(this.label1);
+            this.Font = new System.Drawing.Font("微软雅黑", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;

@@ -48,7 +48,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Extensions\PgnReaderExtension.cs" />
     <Compile Include="MoveDisambiguationDialog.cs">
       <SubType>Form</SubType>
     </Compile>
