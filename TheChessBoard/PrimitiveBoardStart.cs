@@ -10,7 +10,7 @@ namespace TheChessBoard
 {
     static class PrimitiveBoardStart
     {
-        static StdIOGame FormGame = new StdIOGame("", "", "", "");
+        static StdIOGame FormGame = new StdIOGame(@"..\..\..\TestConsoleApp1\bin\Debug\TestConsoleApp1.exe", "", "", "");
         static PrimitiveBoard boardForm;
         static void Main()
         {

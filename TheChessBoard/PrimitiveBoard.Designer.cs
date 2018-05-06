@@ -28,7 +28,7 @@ namespace TheChessBoard
         /// </summary>
         private void InitializeComponent()
         {
-            this.btnWhiteReadLine = new System.Windows.Forms.Button();
+            this.btnWhiteProcStart = new System.Windows.Forms.Button();
             this.btnBlackReadLine = new System.Windows.Forms.Button();
             this.btnMove = new System.Windows.Forms.Button();
             this.txbMoveStr = new System.Windows.Forms.TextBox();
@@ -41,24 +41,25 @@ namespace TheChessBoard
             this.panel2 = new System.Windows.Forms.Panel();
             this.ckbDontCareWhoseTurnItIs = new System.Windows.Forms.CheckBox();
             this.lblCurrentPlayer = new System.Windows.Forms.Label();
+            this.lblWatch = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             this.panel1.SuspendLayout();
             this.panel2.SuspendLayout();
             this.SuspendLayout();
             // 
-            // btnWhiteReadLine
+            // btnWhiteProcStart
             // 
-            this.btnWhiteReadLine.Location = new System.Drawing.Point(40, 31);
-            this.btnWhiteReadLine.Name = "btnWhiteReadLine";
-            this.btnWhiteReadLine.Size = new System.Drawing.Size(125, 53);
-            this.btnWhiteReadLine.TabIndex = 1;
-            this.btnWhiteReadLine.Text = "白方读入一行";
-            this.btnWhiteReadLine.UseVisualStyleBackColor = true;
-            this.btnWhiteReadLine.Visible = false;
+            this.btnWhiteProcStart.Location = new System.Drawing.Point(35, 31);
+            this.btnWhiteProcStart.Name = "btnWhiteProcStart";
+            this.btnWhiteProcStart.Size = new System.Drawing.Size(125, 53);
+            this.btnWhiteProcStart.TabIndex = 1;
+            this.btnWhiteProcStart.Text = "白方开始运行";
+            this.btnWhiteProcStart.UseVisualStyleBackColor = true;
+            this.btnWhiteProcStart.Click += new System.EventHandler(this.btnWhiteProcStart_Click);
             // 
             // btnBlackReadLine
             // 
-            this.btnBlackReadLine.Location = new System.Drawing.Point(211, 31);
+            this.btnBlackReadLine.Location = new System.Drawing.Point(182, 31);
             this.btnBlackReadLine.Name = "btnBlackReadLine";
             this.btnBlackReadLine.Size = new System.Drawing.Size(125, 53);
             this.btnBlackReadLine.TabIndex = 2;
@@ -173,12 +174,22 @@ namespace TheChessBoard
             this.lblCurrentPlayer.TabIndex = 17;
             this.lblCurrentPlayer.Text = "当前执棋：";
             // 
+            // lblWatch
+            // 
+            this.lblWatch.AutoSize = true;
+            this.lblWatch.Location = new System.Drawing.Point(127, 155);
+            this.lblWatch.Name = "lblWatch";
+            this.lblWatch.Size = new System.Drawing.Size(55, 20);
+            this.lblWatch.TabIndex = 18;
+            this.lblWatch.Text = "Watch";
+            // 
             // PrimitiveBoard
             // 
             this.AcceptButton = this.btnMove;
             this.ClientSize = new System.Drawing.Size(925, 744);
+            this.Controls.Add(this.lblWatch);
             this.Controls.Add(this.btnBlackReadLine);
-            this.Controls.Add(this.btnWhiteReadLine);
+            this.Controls.Add(this.btnWhiteProcStart);
             this.Controls.Add(this.panel2);
             this.Font = new System.Drawing.Font("微软雅黑", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
@@ -192,11 +203,12 @@ namespace TheChessBoard
             this.panel2.ResumeLayout(false);
             this.panel2.PerformLayout();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
         #endregion
-        private System.Windows.Forms.Button btnWhiteReadLine;
+        private System.Windows.Forms.Button btnWhiteProcStart;
         private System.Windows.Forms.Button btnBlackReadLine;
         private System.Windows.Forms.Button btnMove;
         private System.Windows.Forms.TextBox txbMoveStr;
@@ -209,5 +221,6 @@ namespace TheChessBoard
         private System.Windows.Forms.Panel panel2;
         private System.Windows.Forms.CheckBox ckbDontCareWhoseTurnItIs;
         private System.Windows.Forms.Label lblCurrentPlayer;
+        private System.Windows.Forms.Label lblWatch;
     }
 }

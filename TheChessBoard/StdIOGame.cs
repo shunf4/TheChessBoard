@@ -7,6 +7,7 @@ using ChessDotNet;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using ChessDotNet.Pieces;
+using System.Diagnostics;
 
 namespace TheChessBoard
 {
@@ -32,8 +33,8 @@ namespace TheChessBoard
     }
 
     public delegate void AppliedMoveEventHandler();
-
     public delegate void GameProcedureStatusUpdateEventHandler(StdIOGameProcedureState gamePState, string reason);
+    public delegate void StdIOProcessFinishedHandler();
 
     public class StdIOGame : INotifyPropertyChanged
     {
@@ -47,9 +48,26 @@ namespace TheChessBoard
 
         public event GameProcedureStatusUpdateEventHandler GameProcedureStatusUpdated;
         public event AppliedMoveEventHandler AppliedMove;
+        public event StdIOProcessFinishedHandler StdIOProcessFinished;
 
         StdIOHandler plyWhiteIO;
         StdIOHandler plyBlackIO;
+
+        public long plyWhiteStopwatchTime
+        {
+            get
+            {
+                return plyWhiteIO.Watch.ElapsedMilliseconds;
+            }
+        }
+
+        public string plyWhiteStopwatchStatus
+        {
+            get
+            {
+                return plyWhiteIO.Watch.IsRunning ? "Yes" : "No";
+            }
+        }
 
         public StdIOGameControlState StdIOGameControlStatus { get; set; }
         public StdIOGameProcedureState StdIOGameProcedureStatus { get; private set; }
@@ -135,7 +153,12 @@ namespace TheChessBoard
 
         public StdIOGame(string plyWhiteExecFileName, string plyWhiteExecArguments, string plyBlackExecFileName, string plyBlackExecArguments)
         {
-            plyWhiteIO = new StdIOHandler(plyWhiteExecFileName, plyWhiteExecArguments, null);
+            plyWhiteIO = new StdIOHandler(plyWhiteExecFileName, plyWhiteExecArguments, (sanString) =>
+            {
+                ParseAndApplyMove(sanString, Player.White, out Piece captured);
+                NotifyPropertyChanged("plyWhiteStopwatchTime");
+                StdIOProcessFinished.Invoke();
+            });
             plyBlackIO = new StdIOHandler(plyBlackExecFileName, plyBlackExecArguments, null);
 
             Piece kw = FenMappings['K'];
@@ -181,7 +204,11 @@ namespace TheChessBoard
             StdIOGameProcedureStatus = StdIOGameProcedureState.Running;
         }
 
-
+        public void ProcessWhiteStart()
+        {
+            plyWhiteIO.Start();
+            plyWhiteIO.Wait();
+        }
 
         public static readonly Dictionary<Tuple<char, SquareColor>, char> fenAndSquareColorMappings = new Dictionary<Tuple<char, SquareColor>, char>()
         {

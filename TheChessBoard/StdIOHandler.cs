@@ -8,9 +8,11 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 
+
+// TODO : 了解 C# 多线程
 namespace TheChessBoard
 {
-    public delegate void LineProcessor(string line);
+    public delegate void LineProcessorHandler(string line);
 
     public class StdIOHandler : INotifyPropertyChanged
     {
@@ -25,10 +27,12 @@ namespace TheChessBoard
 
         Process proc;
 
-        LineProcessor lineProc;
+        public event LineProcessorHandler LineProcess;
         SynchronizationContext _context;
 
         AutoResetEvent outputWaitHandle = new AutoResetEvent(false);
+
+        public Stopwatch Watch = new Stopwatch();
 
         private bool _procStarted = false;
         public bool ProcStarted
@@ -37,10 +41,10 @@ namespace TheChessBoard
             set { _procStarted = value; NotifyPropertyChanged("ProcStarted"); }
         }
 
-        public StdIOHandler(string ExecFileName, string ExecArguments, LineProcessor LineProc)
+        public StdIOHandler(string ExecFileName, string ExecArguments, LineProcessorHandler lineProcessFunc)
         {
             proc = new Process();
-            lineProc = LineProc;
+            this.LineProcess += lineProcessFunc;
 
             _context = SynchronizationContext.Current;
 
@@ -55,15 +59,21 @@ namespace TheChessBoard
             //当proc有行输出的时候（为什么一定要按行啊……flush不行吗……），加到尾部
             proc.OutputDataReceived += (sender, e) =>
             {
+                outputWaitHandle.Set();
                 if (e.Data == null)
                 {
                     //DataReceivedEventArgs 的 Data成员为空即读取完毕
                     //waitHandle用于计时
-                    outputWaitHandle.Set();
+                    
+                    Watch.Stop();
                 }
                 else
                 {
-                    lineProc(e.Data);
+                    //outputWaitHandle.Set();
+                    this.LineProcess?.Invoke(e.Data);
+                    
+                    if (!Watch.IsRunning)
+                        Watch.Start();
                 }
             };
 
@@ -77,14 +87,22 @@ namespace TheChessBoard
         public void Start()
         {
             ProcStarted = proc.Start();
-
+            Watch.Restart();
             proc.BeginOutputReadLine();
         }
 
         public void Stop()
         {
             proc.CancelOutputRead();
+            Watch.Stop();
             ProcStarted = false;
+        }
+
+        public void Wait()
+        {
+            Watch.Start();
+            outputWaitHandle.WaitOne(600000);
+            Watch.Stop();
         }
 
         public void Write(string str)

@@ -35,7 +35,8 @@ namespace TheChessBoard
         {
             InitializeComponent();
             InitializeCustomComponent();
-            GameStart(formGame);
+            GameLoad(formGame);
+
         }
 
         private Button[] btnBoardSquares;
@@ -85,15 +86,23 @@ namespace TheChessBoard
 
         private void PrimitiveBoard_Load(object sender, EventArgs e)
         {
+            GameStart();
         }
 
-        private void GameStart(StdIOGame formGame)
+        private void GameLoad(StdIOGame formGame)
         {
             FormGame = formGame;
             FormGame.PropertyChanged -= FormGamePropertyChangedSubscriber_UpdateUI;
             FormGame.PropertyChanged += FormGamePropertyChangedSubscriber_UpdateUI;
             FormGame.GameProcedureStatusUpdated += FormGameGameProcedureStatusUpdatedSubscriber;
+            FormGame.StdIOProcessFinished += () => { this.Cursor = Cursors.Default; };
 
+            lblWatch.DataBindings.Clear();
+            lblWatch.DataBindings.Add("Text", FormGame, "plyWhiteStopwatchTime");
+        }
+
+        private void GameStart()
+        {
             FormGamePropertyChangedSubscriber_UpdateUI(null, null);
             FormGameGameProcedureStatusUpdatedSubscriber(FormGame.StdIOGameProcedureStatus, "");
             SANPlayerChanged(null, null);
@@ -124,7 +133,7 @@ namespace TheChessBoard
         private void btnMove_Click(object sender, EventArgs e)
         {
             try
-            {
+            {// TODO : San 文本框清空
                 FormGame.ParseAndApplyMove(txbMoveStr.Text, currentPlayer, out pieceJustCaptured);
             } catch (PgnException exception)
             {
@@ -188,11 +197,11 @@ namespace TheChessBoard
             
             if (e == null || e.PropertyName == "BoardPrint")
             {
-                UpdateBoardButtons();
+                this.Invoke(new Action(()=> { UpdateBoardButtons(); }));
             }
             if (e == null || e.PropertyName == "WhoseTurn")
             {
-                UpdateWhoseTurn();
+                this.Invoke(new Action(() => { UpdateWhoseTurn(); }));
             }
         }
 
@@ -337,6 +346,10 @@ namespace TheChessBoard
                 bs.BackColor = ButtonSquareColor;
         }
 
-        
+        private void btnWhiteProcStart_Click(object sender, EventArgs e)
+        {
+            this.Cursor = Cursors.WaitCursor;
+            FormGame.ProcessWhiteStart();
+        }
     }
 }
