@@ -31,12 +31,12 @@ namespace TheChessBoard
 
         Piece pieceJustCaptured;
 
-        public PrimitiveBoard(StdIOGame formGame)
+        public PrimitiveBoard(StdIOGame formGame, out System.Threading.SynchronizationContext context)
         {
             InitializeComponent();
             InitializeCustomComponent();
             GameLoad(formGame);
-
+            context = System.Threading.SynchronizationContext.Current;
         }
 
         private Button[] btnBoardSquares;
@@ -94,47 +94,69 @@ namespace TheChessBoard
             FormGame = formGame;
             FormGame.PropertyChanged -= FormGamePropertyChangedSubscriber_UpdateUI;
             FormGame.PropertyChanged += FormGamePropertyChangedSubscriber_UpdateUI;
-            FormGame.GameProcedureStatusUpdated += FormGameGameProcedureStatusUpdatedSubscriber;
-            FormGame.StdIOProcessFinished += () => { this.Cursor = Cursors.Default; };
+            FormGame.GameProcedureStatusUpdated -= FormGameProcedureStatusUpdatedSubscriber;
+            FormGame.GameProcedureStatusUpdated += FormGameProcedureStatusUpdatedSubscriber;
+            FormGame.GameControlStatusUpdated -= FormGameControlStatusUpdatedSubscriber;
+            FormGame.GameControlStatusUpdated += FormGameControlStatusUpdatedSubscriber;
+            FormGame.AppliedMove -= AfterApplyMove;
+            FormGame.AppliedMove += AfterApplyMove;
 
-            lblWatch.DataBindings.Clear();
-            lblWatch.DataBindings.Add("Text", FormGame, "plyWhiteStopwatchTime");
+            lblWhiteWatch.DataBindings.Clear();
+            lblWhiteWatch.DataBindings.Add("Text", FormGame, "plyWhiteStopwatchTime", false, DataSourceUpdateMode.OnPropertyChanged);
+        }
+
+        void BusifyCursor(){ this.Cursor = Cursors.AppStarting; }
+        void RestoreCursor(){ this.Cursor = Cursors.Default; }
+
+        private void AfterApplyMove()
+        {
+            FormGame.ControlStatus = StdIOGameControlState.Idle;
+            SquareCancelSelect();
         }
 
         private void GameStart()
         {
             FormGamePropertyChangedSubscriber_UpdateUI(null, null);
-            FormGameGameProcedureStatusUpdatedSubscriber(FormGame.StdIOGameProcedureStatus, "");
+            FormGameProcedureStatusUpdatedSubscriber("");
+            FormGameControlStatusUpdatedSubscriber();
             SANPlayerChanged(null, null);
             DestinationMoves = new Dictionary<Button, List<MoreDetailedMove>>();
         }
 
-        private void FormGameGameProcedureStatusUpdatedSubscriber(StdIOGameProcedureState pState, string reason)
+        private void FormGameProcedureStatusUpdatedSubscriber(string reason)
         {
-            if (pState == StdIOGameProcedureState.Running)
+            if (FormGame.ProcedureStatus == StdIOGameProcedureState.Running)
             {
-                //for (int r = 0; r < 64; r++)
-                //{
-                //    btnBoardSquares[r].Enabled = true;
-                //}
                 btnMove.Enabled = true;
             }
             else
             {
-                //for (int r = 0; r < 64; r++)
-                //{
-                //    btnBoardSquares[r].Enabled = false;
-                //}
                 btnMove.Enabled = false;
                 MessageBox.Show(reason, "游戏结束", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+            }
+        }
+
+        private void FormGameControlStatusUpdatedSubscriber()
+        {
+            if (FormGame.ControlStatus == StdIOGameControlState.Idle || FormGame.ControlStatus == StdIOGameControlState.Selected)
+            {
+                if(this.Enabled == false)
+                    btnMove.Enabled = true;
+                RestoreCursor();
+            }
+            else if (FormGame.ControlStatus == StdIOGameControlState.StdIORunning)
+            {
+                btnMove.Enabled = false;
+                BusifyCursor();
             }
         }
 
         private void btnMove_Click(object sender, EventArgs e)
         {
             try
-            {// TODO : San 文本框清空
+            {
                 FormGame.ParseAndApplyMove(txbMoveStr.Text, currentPlayer, out pieceJustCaptured);
+                txbMoveStr.Clear();
             } catch (PgnException exception)
             {
                 MessageBox.Show("SAN 出现解析错误 : "+ exception.Message, "SAN 输入错误", MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, 0);
@@ -143,7 +165,6 @@ namespace TheChessBoard
             {
                 MessageBox.Show("SAN 出现解析错误 : " + exception.Message, "SAN 输入错误", MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, 0);
             }
-            SquareCancelSelect();
         }
 
         private void SANPlayerChanged(object sender, EventArgs e)
@@ -242,7 +263,7 @@ namespace TheChessBoard
         void SquareRightMouseButton(int currRank, File currFile)
         {
             bool didSomething = SquareClick(currRank, currFile, false, false);
-            if(didSomething && FormGame.StdIOGameControlStatus == StdIOGameControlState.Selected)
+            if(didSomething && FormGame.ControlStatus == StdIOGameControlState.Selected)
             {
                 if (DestinationMoves.Count == 0)
                     return;
@@ -260,23 +281,24 @@ namespace TheChessBoard
         void DisambiguationDone(MoreDetailedMove move)
         {
             FormGame.ApplyMove(move, true, out pieceJustCaptured);
-            SquareCancelSelect();
         }
 
         void SquareCancelSelect()
         {
-            FormGame.StdIOGameControlStatus = StdIOGameControlState.Idle;
+            if(FormGame.ControlStatus == StdIOGameControlState.Selected)
+                FormGame.ControlStatus = StdIOGameControlState.Idle;
             CleanSquareColor();
         }
 
         bool SquareClick(int currRank, File currFile, bool allowCancelSelect = true, bool allowMoveSelect = true)
         {
-            if (FormGame.StdIOGameProcedureStatus != StdIOGameProcedureState.Running)
+            if (FormGame.ProcedureStatus != StdIOGameProcedureState.Running)
                 return false;
+
             var pos = new Position(currFile, currRank);
             var clickedButton = btnBoardSquares[8 * (8 - currRank) + (int)currFile];
 
-            if (FormGame.StdIOGameControlStatus == StdIOGameControlState.Selected)
+            if (FormGame.ControlStatus == StdIOGameControlState.Selected)
             {
                 bool cancelSelect = pos.Equals(SelectedPosition) && allowCancelSelect;
                 bool moveSelect = DestinationMoves.ContainsKey(clickedButton) && allowMoveSelect;
@@ -306,7 +328,7 @@ namespace TheChessBoard
                 }
             }
 
-            if (FormGame.StdIOGameControlStatus == StdIOGameControlState.Idle || FormGame.StdIOGameControlStatus == StdIOGameControlState.Selected)
+            if (FormGame.ControlStatus == StdIOGameControlState.Idle || FormGame.ControlStatus == StdIOGameControlState.Selected)
             {
                 var validMoves = FormGame.Game.GetValidMoves(pos, false);
                 var piece = FormGame.Game.GetPieceAt(pos);
@@ -314,7 +336,7 @@ namespace TheChessBoard
                 {
                     CleanSquareColor();
                     SelectedPosition = pos;
-                    FormGame.StdIOGameControlStatus = StdIOGameControlState.Selected;
+                    FormGame.ControlStatus = StdIOGameControlState.Selected;
 
                     DestinationMoves.Clear();
 
@@ -348,8 +370,22 @@ namespace TheChessBoard
 
         private void btnWhiteProcStart_Click(object sender, EventArgs e)
         {
-            this.Cursor = Cursors.WaitCursor;
             FormGame.ProcessWhiteStart();
+        }
+
+        private void btnWhiteReadLine_Click(object sender, EventArgs e)
+        {
+            FormGame.ProcessWhiteAllowOutputAndWait();
+        }
+
+        private void lblFormStatusCaption_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void panel6_Paint(object sender, PaintEventArgs e)
+        {
+
         }
     }
 }

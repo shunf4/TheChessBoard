@@ -11,10 +11,14 @@ namespace TestConsoleApp1
     {
         static void Main()
         {
-            String str1 = "d4";
             Thread.Sleep(4000);
-            Console.Write(str1 + Environment.NewLine);
-            Console.Write(Environment.NewLine);
+            Console.Write("d4" + Environment.NewLine);
+            Thread.Sleep(2000);
+
+            Console.Write("e4" + Environment.NewLine);
+            Thread.Sleep(500);
+
+            Console.Write("e5" + Environment.NewLine);
             Console.ReadLine();
         }
         

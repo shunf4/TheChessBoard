@@ -8,6 +8,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using ChessDotNet.Pieces;
 using System.Diagnostics;
+using System.Threading;
 
 namespace TheChessBoard
 {
@@ -33,7 +34,8 @@ namespace TheChessBoard
     }
 
     public delegate void AppliedMoveEventHandler();
-    public delegate void GameProcedureStatusUpdateEventHandler(StdIOGameProcedureState gamePState, string reason);
+    public delegate void GameProcedureStatusUpdateEventHandler(string reason);
+    public delegate void GameControlStatusUpdateEventHandler();
     public delegate void StdIOProcessFinishedHandler();
 
     public class StdIOGame : INotifyPropertyChanged
@@ -46,18 +48,22 @@ namespace TheChessBoard
         }
         #endregion
 
+        ManualResetEvent _updateUILock = new ManualResetEvent(false);
+
         public event GameProcedureStatusUpdateEventHandler GameProcedureStatusUpdated;
+        public event GameControlStatusUpdateEventHandler GameControlStatusUpdated;
         public event AppliedMoveEventHandler AppliedMove;
         public event StdIOProcessFinishedHandler StdIOProcessFinished;
 
         StdIOHandler plyWhiteIO;
         StdIOHandler plyBlackIO;
 
-        public long plyWhiteStopwatchTime
+        public string plyWhiteStopwatchTime
         {
             get
             {
-                return plyWhiteIO.Watch.ElapsedMilliseconds;
+                var t = plyWhiteIO.Watch.Elapsed;
+                return string.Format("{0}:{1}", Math.Floor(t.TotalMinutes), t.ToString("ss\\.ff"));
             }
         }
 
@@ -69,8 +75,33 @@ namespace TheChessBoard
             }
         }
 
-        public StdIOGameControlState StdIOGameControlStatus { get; set; }
-        public StdIOGameProcedureState StdIOGameProcedureStatus { get; private set; }
+        private StdIOGameControlState _controlStatus;
+        private StdIOGameProcedureState _procedureStatus;
+
+        public StdIOGameControlState ControlStatus
+        {
+            get { return _controlStatus; }
+            set
+            {
+                _controlStatus = value;
+                GameControlStatusUpdated?.Invoke();
+            }
+        }
+        public StdIOGameProcedureState ProcedureStatus
+        {
+            get { return _procedureStatus; }
+            set
+            {
+                _procedureStatus = value;
+                GameProcedureStatusUpdated?.Invoke("");
+            }
+        }
+
+        public void SetProcedureStatus(StdIOGameProcedureState pState, string reason)
+        {
+            _procedureStatus = pState;
+            GameProcedureStatusUpdated?.Invoke(reason);
+        }
 
         public ChessGame Game;
 
@@ -83,34 +114,40 @@ namespace TheChessBoard
             bool drawFifty = Game.FiftyMovesAndThisCanResultInDraw;
             if (whiteWins || blackWins || drawBlackStalemate || drawWhiteStalemate || drawFifty)
             {
-                
-                StringBuilder resultStr = new StringBuilder();
+
+                string resultStr;
+                StdIOGameProcedureState pState;
                 if (whiteWins)
                 {
-                    resultStr.Append("黑方被将死。白方胜！");
-                    StdIOGameProcedureStatus = StdIOGameProcedureState.WhiteWins;
+                    resultStr = ("黑方被将死。白方胜！");
+                    pState = StdIOGameProcedureState.WhiteWins;
                 }
                 else if(blackWins)
                 {
-                    resultStr.Append("白方被将死。黑方胜！");
-                    StdIOGameProcedureStatus = StdIOGameProcedureState.BlackWins;
+                    resultStr = ("白方被将死。黑方胜！");
+                    pState = StdIOGameProcedureState.BlackWins;
                 }
                 else if (drawWhiteStalemate)
                 {
-                    resultStr.Append("白方陷入僵局。和局！");
-                    StdIOGameProcedureStatus = StdIOGameProcedureState.Draw;
+                    resultStr = ("白方陷入僵局。和局！");
+                    pState = StdIOGameProcedureState.Draw;
                 }
                 else if (drawBlackStalemate)
                 {
-                    resultStr.Append("黑方陷入僵局。和局！");
-                    StdIOGameProcedureStatus = StdIOGameProcedureState.Draw;
+                    resultStr = ("黑方陷入僵局。和局！");
+                    pState = StdIOGameProcedureState.Draw;
                 }
                 else if (drawFifty)
                 {
-                    resultStr.Append("50 回合内无走兵或吃子动作。和局！");
-                    StdIOGameProcedureStatus = StdIOGameProcedureState.Draw;
+                    resultStr = ("50 回合内无走兵或吃子动作。和局！");
+                    pState = StdIOGameProcedureState.Draw;
                 }
-                this.GameProcedureStatusUpdated.Invoke(StdIOGameProcedureStatus, resultStr.ToString());
+                else
+                {
+                    throw new Exception();
+                }
+
+                SetProcedureStatus(pState, resultStr);
             }
         }
 
@@ -153,13 +190,18 @@ namespace TheChessBoard
 
         public StdIOGame(string plyWhiteExecFileName, string plyWhiteExecArguments, string plyBlackExecFileName, string plyBlackExecArguments)
         {
-            plyWhiteIO = new StdIOHandler(plyWhiteExecFileName, plyWhiteExecArguments, (sanString) =>
+            plyWhiteIO = new StdIOHandler(plyWhiteExecFileName, plyWhiteExecArguments);
+            plyBlackIO = new StdIOHandler(plyBlackExecFileName, plyBlackExecArguments);
+
+            plyWhiteIO.LineProcess += (sanString) =>
             {
                 ParseAndApplyMove(sanString, Player.White, out Piece captured);
+                //plyWhiteIO.Watch.Stop();
                 NotifyPropertyChanged("plyWhiteStopwatchTime");
-                StdIOProcessFinished.Invoke();
-            });
-            plyBlackIO = new StdIOHandler(plyBlackExecFileName, plyBlackExecArguments, null);
+                StdIOProcessFinished?.Invoke();
+                _updateUILock.Set();
+            };
+
 
             Piece kw = FenMappings['K'];
             Piece kb = FenMappings['k'];
@@ -200,14 +242,52 @@ namespace TheChessBoard
             };
 
             Game = new ChessGame(gameCreationData);
-            StdIOGameControlStatus = StdIOGameControlState.Idle;
-            StdIOGameProcedureStatus = StdIOGameProcedureState.Running;
+            ControlStatus = StdIOGameControlState.Idle;
+            ProcedureStatus = StdIOGameProcedureState.Running;
+        }
+
+        System.Threading.SynchronizationContext _context;
+
+        public void LoadSynchronizationContext(System.Threading.SynchronizationContext context)
+        {
+            _context = context;
+            plyWhiteIO.Context = _context;
+            plyBlackIO.Context = _context;
         }
 
         public void ProcessWhiteStart()
         {
             plyWhiteIO.Start();
-            plyWhiteIO.Wait();
+        }
+
+
+        public void ProcessWhiteAllowOutputAndWait()
+        {
+            ControlStatus = StdIOGameControlState.StdIORunning;
+            Thread t = new Thread(new ThreadStart(plyWhiteIO.AllowOutputAndWait));
+            t.Start();
+
+            Thread updateUI = new Thread(new ThreadStart(
+                () =>
+                {
+                    this._updateUILock.Reset();
+
+                    while (true)
+                    {
+                        this._context.Post(delegate
+                        {
+                            NotifyPropertyChanged("plyWhiteStopwatchTime");
+                        }, null);
+                        if (this._updateUILock.WaitOne(17))
+                        {
+                            break;
+                        }
+                    }
+
+                }
+                ));
+
+            updateUI.Start();
         }
 
         public static readonly Dictionary<Tuple<char, SquareColor>, char> fenAndSquareColorMappings = new Dictionary<Tuple<char, SquareColor>, char>()

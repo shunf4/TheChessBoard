@@ -28,9 +28,22 @@ namespace TheChessBoard
         Process proc;
 
         public event LineProcessorHandler LineProcess;
-        SynchronizationContext _context;
+        SynchronizationContext _context = SynchronizationContext.Current;
+
+        public SynchronizationContext Context
+        {
+            get
+            {
+                return _context;
+            }
+            set
+            {
+                _context = value;
+            }
+        }
 
         AutoResetEvent outputWaitHandle = new AutoResetEvent(false);
+        ManualResetEvent allowMoveHandle = new ManualResetEvent(false);
 
         public Stopwatch Watch = new Stopwatch();
 
@@ -41,12 +54,9 @@ namespace TheChessBoard
             set { _procStarted = value; NotifyPropertyChanged("ProcStarted"); }
         }
 
-        public StdIOHandler(string ExecFileName, string ExecArguments, LineProcessorHandler lineProcessFunc)
+        public StdIOHandler(string ExecFileName, string ExecArguments)
         {
             proc = new Process();
-            this.LineProcess += lineProcessFunc;
-
-            _context = SynchronizationContext.Current;
 
             proc.StartInfo.FileName = ExecFileName;
             proc.StartInfo.Arguments = ExecArguments;
@@ -59,21 +69,20 @@ namespace TheChessBoard
             //当proc有行输出的时候（为什么一定要按行啊……flush不行吗……），加到尾部
             proc.OutputDataReceived += (sender, e) =>
             {
+                allowMoveHandle.WaitOne();
                 outputWaitHandle.Set();
                 if (e.Data == null)
                 {
-                    //DataReceivedEventArgs 的 Data成员为空即读取完毕
+                    //(???)DataReceivedEventArgs 的 Data成员为空即读取完毕
                     //waitHandle用于计时
-                    
+                    MessageBox.Show("<null>");
                     Watch.Stop();
                 }
                 else
                 {
                     //outputWaitHandle.Set();
-                    this.LineProcess?.Invoke(e.Data);
-                    
-                    if (!Watch.IsRunning)
-                        Watch.Start();
+                    _context.Post(delegate { LineProcess?.Invoke(e.Data); }, null);
+                    allowMoveHandle.Reset();
                 }
             };
 
@@ -87,7 +96,7 @@ namespace TheChessBoard
         public void Start()
         {
             ProcStarted = proc.Start();
-            Watch.Restart();
+            Watch.Reset();
             proc.BeginOutputReadLine();
         }
 
@@ -98,9 +107,10 @@ namespace TheChessBoard
             ProcStarted = false;
         }
 
-        public void Wait()
+        public void AllowOutputAndWait()
         {
             Watch.Start();
+            allowMoveHandle.Set();
             outputWaitHandle.WaitOne(600000);
             Watch.Stop();
         }
