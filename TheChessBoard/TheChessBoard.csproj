@@ -7,7 +7,7 @@
     <ProjectGuid>{DAAF291E-B7B2-4D61-B4B2-DC42AD1C0BDA}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <RootNamespace>TheChessBoard</RootNamespace>
-    <AssemblyName>PrimitiveChessBoard</AssemblyName>
+    <AssemblyName>TheChessBoard</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -32,7 +32,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup>
-    <StartupObject>TheChessBoard.PrimitiveBoardStart</StartupObject>
+    <StartupObject>TheChessBoard.TheChessBoardStart</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -48,35 +48,36 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="InputExecCommandDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="InputExecCommandDialog.Designer.cs">
+      <DependentUpon>InputExecCommandDialog.cs</DependentUpon>
+    </Compile>
     <Compile Include="MoveDisambiguationDialog.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="MoveDisambiguationDialog.Designer.cs">
       <DependentUpon>MoveDisambiguationDialog.cs</DependentUpon>
     </Compile>
-    <Compile Include="PrimitiveBoard.cs">
+    <Compile Include="TheChessBoard.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="PrimitiveBoard.Designer.cs">
-      <DependentUpon>PrimitiveBoard.cs</DependentUpon>
+    <Compile Include="TheChessBoard.Designer.cs">
+      <DependentUpon>TheChessBoard.cs</DependentUpon>
     </Compile>
-    <Compile Include="PrimitiveBoardStart.cs" />
+    <Compile Include="TheChessBoardStart.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ReadStdIOTestForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="ReadStdIOTestForm.Designer.cs">
-      <DependentUpon>ReadStdIOTestForm.cs</DependentUpon>
-    </Compile>
-    <Compile Include="ReadWriteStdIO.cs" />
-    <Compile Include="StdIOGame.cs" />
+    <Compile Include="ChessBoardGame.cs" />
     <Compile Include="StdIOHandler.cs" />
-    <Compile Include="TestStart.cs" />
+    <EmbeddedResource Include="InputExecCommandDialog.resx">
+      <DependentUpon>InputExecCommandDialog.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="MoveDisambiguationDialog.resx">
       <DependentUpon>MoveDisambiguationDialog.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="PrimitiveBoard.resx">
-      <DependentUpon>PrimitiveBoard.cs</DependentUpon>
+    <EmbeddedResource Include="TheChessBoard.resx">
+      <DependentUpon>TheChessBoard.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -87,9 +88,6 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <EmbeddedResource Include="ReadStdIOTestForm.resx">
-      <DependentUpon>ReadStdIOTestForm.cs</DependentUpon>
-    </EmbeddedResource>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>

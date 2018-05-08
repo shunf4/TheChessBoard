@@ -9,7 +9,6 @@ using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 
 
-// TODO : 了解 C# 多线程
 namespace TheChessBoard
 {
     public delegate void LineProcessorHandler(string line);
@@ -54,11 +53,11 @@ namespace TheChessBoard
             set { _procStarted = value; NotifyPropertyChanged("ProcStarted"); }
         }
 
-        public StdIOHandler(string ExecFileName, string ExecArguments)
+        public StdIOHandler(string ExecPath, string ExecArguments)
         {
             proc = new Process();
 
-            proc.StartInfo.FileName = ExecFileName;
+            proc.StartInfo.FileName = ExecPath;
             proc.StartInfo.Arguments = ExecArguments;
             proc.StartInfo.UseShellExecute = false;
             proc.StartInfo.RedirectStandardInput = true;
@@ -123,6 +122,11 @@ namespace TheChessBoard
             }
 
             proc.StandardInput.WriteLine(str);
+        }
+
+        public void Dispose()
+        {
+            ;
         }
     }
 }
