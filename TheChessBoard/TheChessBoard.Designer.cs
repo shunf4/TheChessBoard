@@ -44,7 +44,7 @@ namespace TheChessBoard
             this.ckbDontCareWhoseTurnItIs = new System.Windows.Forms.CheckBox();
             this.lblCurrentPlayer = new System.Windows.Forms.Label();
             this.lblWhiteWatch = new System.Windows.Forms.Label();
-            this.btnWhiteReadLine = new System.Windows.Forms.Button();
+            this.btnWhiteReadMove = new System.Windows.Forms.Button();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.panel5 = new System.Windows.Forms.Panel();
             this.lblBlackWatch = new System.Windows.Forms.Label();
@@ -73,7 +73,7 @@ namespace TheChessBoard
             this.dgvHistoryMoves = new System.Windows.Forms.DataGridView();
             this.btnLoadWhiteAI = new System.Windows.Forms.Button();
             this.btnLoadBlackAI = new System.Windows.Forms.Button();
-            this.btnBlackReadStep = new System.Windows.Forms.Button();
+            this.btnBlackReadMove = new System.Windows.Forms.Button();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.groupBox7 = new System.Windows.Forms.GroupBox();
             this.rtbLog = new System.Windows.Forms.RichTextBox();
@@ -206,6 +206,7 @@ namespace TheChessBoard
             // 
             this.txbFen.Location = new System.Drawing.Point(17, 27);
             this.txbFen.Name = "txbFen";
+            this.txbFen.ReadOnly = true;
             this.txbFen.Size = new System.Drawing.Size(525, 27);
             this.txbFen.TabIndex = 0;
             // 
@@ -249,15 +250,15 @@ namespace TheChessBoard
             this.lblWhiteWatch.TabIndex = 18;
             this.lblWhiteWatch.Text = "--:--.--";
             // 
-            // btnWhiteReadLine
+            // btnWhiteReadMove
             // 
-            this.btnWhiteReadLine.Location = new System.Drawing.Point(35, 68);
-            this.btnWhiteReadLine.Name = "btnWhiteReadLine";
-            this.btnWhiteReadLine.Size = new System.Drawing.Size(134, 38);
-            this.btnWhiteReadLine.TabIndex = 19;
-            this.btnWhiteReadLine.Text = "白方读入一步(&Y)";
-            this.btnWhiteReadLine.UseVisualStyleBackColor = true;
-            this.btnWhiteReadLine.Click += new System.EventHandler(this.btnWhiteReadLine_Click);
+            this.btnWhiteReadMove.Location = new System.Drawing.Point(35, 68);
+            this.btnWhiteReadMove.Name = "btnWhiteReadMove";
+            this.btnWhiteReadMove.Size = new System.Drawing.Size(134, 38);
+            this.btnWhiteReadMove.TabIndex = 19;
+            this.btnWhiteReadMove.Text = "白方读入一步(&Y)";
+            this.btnWhiteReadMove.UseVisualStyleBackColor = true;
+            this.btnWhiteReadMove.Click += new System.EventHandler(this.btnWhiteReadMove_Click);
             // 
             // groupBox2
             // 
@@ -430,7 +431,7 @@ namespace TheChessBoard
             this.btnModeConfirm.Name = "btnModeConfirm";
             this.btnModeConfirm.Size = new System.Drawing.Size(141, 30);
             this.btnModeConfirm.TabIndex = 4;
-            this.btnModeConfirm.Text = "选择模式并开始(&S)";
+            this.btnModeConfirm.Text = "选定模式并开始(&S)";
             this.btnModeConfirm.UseVisualStyleBackColor = true;
             this.btnModeConfirm.Click += new System.EventHandler(this.btnModeConfirm_Click);
             // 
@@ -529,6 +530,7 @@ namespace TheChessBoard
             this.dgvHistoryMoves.Location = new System.Drawing.Point(12, 26);
             this.dgvHistoryMoves.Name = "dgvHistoryMoves";
             this.dgvHistoryMoves.ReadOnly = true;
+            this.dgvHistoryMoves.RowHeadersVisible = false;
             this.dgvHistoryMoves.RowTemplate.Height = 27;
             this.dgvHistoryMoves.Size = new System.Drawing.Size(272, 367);
             this.dgvHistoryMoves.TabIndex = 22;
@@ -551,15 +553,17 @@ namespace TheChessBoard
             this.btnLoadBlackAI.TabIndex = 24;
             this.btnLoadBlackAI.Text = "载入黑方AI(&O)...";
             this.btnLoadBlackAI.UseVisualStyleBackColor = true;
+            this.btnLoadBlackAI.Click += new System.EventHandler(this.btnLoadBlackAI_Click);
             // 
-            // btnBlackReadStep
+            // btnBlackReadMove
             // 
-            this.btnBlackReadStep.Location = new System.Drawing.Point(180, 68);
-            this.btnBlackReadStep.Name = "btnBlackReadStep";
-            this.btnBlackReadStep.Size = new System.Drawing.Size(134, 38);
-            this.btnBlackReadStep.TabIndex = 25;
-            this.btnBlackReadStep.Text = "黑方读入一步(&U)";
-            this.btnBlackReadStep.UseVisualStyleBackColor = true;
+            this.btnBlackReadMove.Location = new System.Drawing.Point(180, 68);
+            this.btnBlackReadMove.Name = "btnBlackReadMove";
+            this.btnBlackReadMove.Size = new System.Drawing.Size(134, 38);
+            this.btnBlackReadMove.TabIndex = 25;
+            this.btnBlackReadMove.Text = "黑方读入一步(&U)";
+            this.btnBlackReadMove.UseVisualStyleBackColor = true;
+            this.btnBlackReadMove.Click += new System.EventHandler(this.btnBlackReadMove_Click);
             // 
             // groupBox4
             // 
@@ -597,10 +601,10 @@ namespace TheChessBoard
             this.AcceptButton = this.btnMove;
             this.ClientSize = new System.Drawing.Size(1218, 842);
             this.Controls.Add(this.groupBox7);
-            this.Controls.Add(this.btnBlackReadStep);
+            this.Controls.Add(this.btnBlackReadMove);
             this.Controls.Add(this.btnLoadBlackAI);
             this.Controls.Add(this.btnLoadWhiteAI);
-            this.Controls.Add(this.btnWhiteReadLine);
+            this.Controls.Add(this.btnWhiteReadMove);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.panel2);
@@ -652,7 +656,7 @@ namespace TheChessBoard
         private System.Windows.Forms.CheckBox ckbDontCareWhoseTurnItIs;
         private System.Windows.Forms.Label lblCurrentPlayer;
         private System.Windows.Forms.Label lblWhiteWatch;
-        private System.Windows.Forms.Button btnWhiteReadLine;
+        private System.Windows.Forms.Button btnWhiteReadMove;
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.Panel panel4;
         private System.Windows.Forms.Label lblWhiteStatusText;
@@ -680,7 +684,7 @@ namespace TheChessBoard
         private System.Windows.Forms.Button btnAllReset;
         private System.Windows.Forms.Button btnLoadWhiteAI;
         private System.Windows.Forms.Button btnLoadBlackAI;
-        private System.Windows.Forms.Button btnBlackReadStep;
+        private System.Windows.Forms.Button btnBlackReadMove;
         private System.Windows.Forms.GroupBox groupBox4;
         private System.Windows.Forms.GroupBox groupBox6;
         private System.Windows.Forms.TextBox txbFen;

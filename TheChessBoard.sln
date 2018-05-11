@@ -5,11 +5,11 @@ VisualStudioVersion = 15.0.27428.2015
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheChessBoard", "TheChessBoard\TheChessBoard.csproj", "{DAAF291E-B7B2-4D61-B4B2-DC42AD1C0BDA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestConsoleApp1", "TestConsoleApp1\TestConsoleApp1.csproj", "{63F75B8E-D1AC-4F9A-B282-2907D4F7BA0B}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestConsoleApp2", "TestConsoleApp2\TestConsoleApp2.csproj", "{3F558D15-93D9-462B-B466-868FC5B2D855}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChessDotNet", "Chess.NET\ChessDotNet\ChessDotNet.csproj", "{BE2E6962-A2B9-4C04-9B93-011F51617166}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChessArtificialRetard", "ChessArtificialRetard\ChessArtificialRetard.csproj", "{9DF88491-F688-455A-A703-C77BFB0B557A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EightQueen", "EightQueen\EightQueen.csproj", "{B972F243-3AC7-4E70-8125-CD542428A1B2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,18 +21,18 @@ Global
 		{DAAF291E-B7B2-4D61-B4B2-DC42AD1C0BDA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DAAF291E-B7B2-4D61-B4B2-DC42AD1C0BDA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DAAF291E-B7B2-4D61-B4B2-DC42AD1C0BDA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{63F75B8E-D1AC-4F9A-B282-2907D4F7BA0B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{63F75B8E-D1AC-4F9A-B282-2907D4F7BA0B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{63F75B8E-D1AC-4F9A-B282-2907D4F7BA0B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{63F75B8E-D1AC-4F9A-B282-2907D4F7BA0B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3F558D15-93D9-462B-B466-868FC5B2D855}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3F558D15-93D9-462B-B466-868FC5B2D855}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3F558D15-93D9-462B-B466-868FC5B2D855}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3F558D15-93D9-462B-B466-868FC5B2D855}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BE2E6962-A2B9-4C04-9B93-011F51617166}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BE2E6962-A2B9-4C04-9B93-011F51617166}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BE2E6962-A2B9-4C04-9B93-011F51617166}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BE2E6962-A2B9-4C04-9B93-011F51617166}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9DF88491-F688-455A-A703-C77BFB0B557A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9DF88491-F688-455A-A703-C77BFB0B557A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9DF88491-F688-455A-A703-C77BFB0B557A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9DF88491-F688-455A-A703-C77BFB0B557A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B972F243-3AC7-4E70-8125-CD542428A1B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B972F243-3AC7-4E70-8125-CD542428A1B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B972F243-3AC7-4E70-8125-CD542428A1B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B972F243-3AC7-4E70-8125-CD542428A1B2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

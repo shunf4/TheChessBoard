@@ -27,10 +27,16 @@ namespace TheChessBoard
         private Color ButtonSquareCheckedColor = Color.LightCoral;
 
         private Color ColorRunning = Color.FromArgb(0, 192, 0);
-        private Color ColorNotStarted = Color.Gray;
+        private Color ColorGameNotStarted = Color.Gray;
         private Color ColorBlackWins = Color.Black;
         private Color ColorWhiteWins = Color.White;
         private Color ColorDraw = Color.Blue;
+        private Color ColorProcNotLoaded = Color.FromArgb(192, 192, 192);
+        private Color ColorProcNotStarted = Color.FromArgb(156, 200, 156);
+        private Color ColorBusy = Color.FromArgb(255, 0, 0);
+        private Color ColorIdle = Color.FromArgb(0, 192, 0);
+
+        private bool frequentlyRefresh = true;
         #endregion
 
         #region 控件相关
@@ -41,9 +47,10 @@ namespace TheChessBoard
         ChessDotNet.Player currentPlayer;
         Position SelectedPosition;
         Dictionary<Button, List<MoreDetailedMove>> DestinationMoves;
+        BindingSource HistoryMovesBindingSource;
 
         public static string FormName = "The Chess Board";
-        public static string FormVersion = "0.0.1.0";
+        public static string FormVersion = "Alpha";
 
         Piece pieceJustCaptured;
 
@@ -75,8 +82,9 @@ namespace TheChessBoard
             lblBlackWatch.DataBindings.Clear();
             lblBlackWatch.DataBindings.Add("Text", FormGame, "BlackStopwatchTime", false, DataSourceUpdateMode.OnPropertyChanged);
 
-            var context = System.Threading.SynchronizationContext.Current;
+            var context = SynchronizationContext.Current;
             FormGame.LoadSynchronizationContext(context);
+            FormGame.FormInvoke = Invoke;
         }
 
         #region 和控件有关的方法
@@ -87,15 +95,68 @@ namespace TheChessBoard
             this.SuspendLayout();
             InitializeButtonSquares();
 
-            
-
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ResumeLayout(false);
             this.PerformLayout();
 
+            if (true)
+            {
+                FormClosing += (sender, e) =>
+                {/*
+                if (MessageBox.Show("确认要退出吗？", "退出确认", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+                    e.Cancel = false;
+                else
+                    e.Cancel = true;*/
+
+                    FormGame.KillAllAndResetStatus();
+                };
+            }
+
             // Log
             SetLog(string.Format(@"{{\rtf1\ansicpg936 \b {0} {1}\b0 \line 窗体控件设置完成\line}}", FormName, FormVersion));
+
+            dgvHistoryMoves.AutoGenerateColumns = false;
+            dgvHistoryMoves.MultiSelect = false;
+            dgvHistoryMoves.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvHistoryMoves.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+            dgvHistoryMoves.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+            dgvHistoryMoves.ColumnHeadersDefaultCellStyle.Font = new Font("微软雅黑", 11, FontStyle.Regular, GraphicsUnit.Pixel);
+
+            dgvHistoryMoves.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                HeaderText = "No",
+                Width = 35,
+                ReadOnly = true,
+                Name = "Index",
+                DataPropertyName = "Index"
+            });
+            dgvHistoryMoves.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                HeaderText = "行动方",
+                Width = 55,
+                ReadOnly = true,
+                Name = "PlayerString",
+                DataPropertyName = "PlayerString"
+            });
+            dgvHistoryMoves.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                HeaderText = "SAN字串",
+                Width = 60,
+                ReadOnly = true,
+                Name = "SANString",
+                DataPropertyName = "SANString"
+            });
+            dgvHistoryMoves.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                HeaderText = "文字描述",
+                Width = 117,
+                ReadOnly = true,
+                Name = "FriendlyText",
+                DataPropertyName = "FriendlyText"
+            });
+
+
         }
 
         private void InitializeButtonSquares()
@@ -135,7 +196,7 @@ namespace TheChessBoard
             }
             this.pnlBoard.ResumeLayout(false);
             this.pnlBoard.PerformLayout();
-            
+
         }
 
         private void PrimitiveBoard_Load(object sender, EventArgs e)
@@ -145,7 +206,8 @@ namespace TheChessBoard
 
         #endregion
 
-        void BusifyCursor() { this.Cursor = Cursors.AppStarting; }
+        void ArrowBusifyCursor() { this.Cursor = Cursors.AppStarting; }
+        void BusifyCursor() { this.Cursor = Cursors.WaitCursor; }
         void RestoreCursor() { this.Cursor = Cursors.Default; }
 
         public void AppendLog(String logRTF)
@@ -160,24 +222,315 @@ namespace TheChessBoard
             rtbLog.SelectedRtf = logRTF;
         }
 
-        private void DelimitSANPlayerIfNeeded()
+        private void DelimitPlayerIfNeeded()
         {
-            if (FormGame.CareWhoseTurnItIs)
-            {
-                if (FormGame.WhoseTurn == Player.Black)
+            if (FormGame.Mode == GameMode.Manual)
+                if (FormGame.ProcedureStatus == ChessBoardGameProcedureState.Running)
                 {
-                    rdbBlack.Enabled = true;
-                    rdbBlack.Checked = true;
-                    rdbWhite.Enabled = false;
-                    rdbWhite.Checked = false;
+                    if (FormGame.CareWhoseTurnItIs)
+                    {
+                        if (FormGame.WhoseTurn == Player.Black)
+                        {
+                            rdbBlack.Enabled = true;
+                            rdbBlack.Checked = true;
+                            rdbWhite.Enabled = false;
+                            rdbWhite.Checked = false;
+                        }
+                        else
+                        {
+                            rdbBlack.Enabled = false;
+                            rdbBlack.Checked = false;
+                            rdbWhite.Enabled = true;
+                            rdbWhite.Checked = true;
+                        }
+                        if (FormGame.WhoseTurn == Player.Black)
+                        {
+                            btnBlackReadMove.Enabled = FormGame.BlackStatus == StdIOState.NotRequesting && !FormGame.HasBlackManuallyMoved;
+                            btnWhiteReadMove.Enabled = false;
+                        }
+                        else
+                        {
+                            btnWhiteReadMove.Enabled = FormGame.WhiteStatus == StdIOState.NotRequesting && !FormGame.HasWhiteManuallyMoved;
+                            btnBlackReadMove.Enabled = false;
+                        }
+                    }
+                    else
+                    {
+                        rdbBlack.Enabled = true;
+                        rdbWhite.Enabled = true;
+
+                        btnWhiteReadMove.Enabled = FormGame.WhiteStatus == StdIOState.NotRequesting && !FormGame.HasWhiteManuallyMoved && FormGame.WhoseTurn == Player.White;
+                        btnBlackReadMove.Enabled = FormGame.BlackStatus == StdIOState.NotRequesting && !FormGame.HasBlackManuallyMoved && FormGame.WhoseTurn == Player.Black;
+                    }
                 }
                 else
                 {
-                    rdbBlack.Enabled = !true;
-                    rdbBlack.Checked = !true;
-                    rdbWhite.Enabled = !false;
-                    rdbWhite.Checked = !false;
+                    if (FormGame.WhoseTurn == Player.Black)
+                    {
+                        rdbBlack.Enabled = false;
+                        rdbBlack.Checked = true;
+                        rdbWhite.Enabled = false;
+                        rdbWhite.Checked = false;
+                    }
+                    else
+                    {
+                        rdbBlack.Enabled = false;
+                        rdbBlack.Checked = false;
+                        rdbWhite.Enabled = false;
+                        rdbWhite.Checked = true;
+                    }
+                    btnWhiteReadMove.Enabled = false;
+                    btnBlackReadMove.Enabled = false;
                 }
+            else if (FormGame.Mode == GameMode.BlackAuto)
+                if (FormGame.ProcedureStatus == ChessBoardGameProcedureState.Running)
+                {
+                    if (FormGame.CareWhoseTurnItIs)
+                    {
+                        if (FormGame.WhoseTurn == Player.Black)
+                        {
+                            rdbBlack.Enabled = false;
+                            rdbBlack.Checked = true;
+                            rdbWhite.Enabled = false;
+                            rdbWhite.Checked = false;
+                        }
+                        else
+                        {
+                            rdbBlack.Enabled = false;
+                            rdbBlack.Checked = false;
+                            rdbWhite.Enabled = true;
+                            rdbWhite.Checked = false;
+                        }
+                        if (FormGame.WhoseTurn == Player.Black)
+                        {
+                            btnBlackReadMove.Enabled = false;
+                            btnWhiteReadMove.Enabled = false;
+                        }
+                        else
+                        {
+                            btnWhiteReadMove.Enabled = FormGame.WhiteStatus == StdIOState.NotRequesting && !FormGame.HasWhiteManuallyMoved;
+                            btnBlackReadMove.Enabled = false;
+                        }
+                    }
+                    else
+                    {
+                        rdbBlack.Enabled = false;
+                        rdbBlack.Checked = false;
+                        rdbWhite.Enabled = true;
+                        rdbWhite.Checked = true;
+
+                        btnWhiteReadMove.Enabled = FormGame.WhiteStatus == StdIOState.NotRequesting && !FormGame.HasWhiteManuallyMoved && FormGame.WhoseTurn == Player.White;
+                        btnBlackReadMove.Enabled = FormGame.BlackStatus == StdIOState.NotRequesting && !FormGame.HasBlackManuallyMoved && FormGame.WhoseTurn == Player.Black;
+                    }
+                }
+                else
+                {
+                    if (FormGame.WhoseTurn == Player.Black)
+                    {
+                        rdbBlack.Enabled = false;
+                        rdbBlack.Checked = true;
+                        rdbWhite.Enabled = false;
+                        rdbWhite.Checked = false;
+                    }
+                    else
+                    {
+                        rdbBlack.Enabled = false;
+                        rdbBlack.Checked = false;
+                        rdbWhite.Enabled = false;
+                        rdbWhite.Checked = true;
+                    }
+                    btnWhiteReadMove.Enabled = false;
+                    btnBlackReadMove.Enabled = false;
+                }
+            else if (FormGame.Mode == GameMode.WhiteAuto)
+                if (FormGame.ProcedureStatus == ChessBoardGameProcedureState.Running)
+                {
+                    if (FormGame.CareWhoseTurnItIs)
+                    {
+                        if (FormGame.WhoseTurn == Player.Black)
+                        {
+                            rdbBlack.Enabled = true;
+                            rdbBlack.Checked = true;
+                            rdbWhite.Enabled = false;
+                            rdbWhite.Checked = false;
+                        }
+                        else
+                        {
+                            rdbBlack.Enabled = false;
+                            rdbBlack.Checked = false;
+                            rdbWhite.Enabled = false;
+                            rdbWhite.Checked = true;
+                        }
+                        if (FormGame.WhoseTurn == Player.Black)
+                        {
+                            btnBlackReadMove.Enabled = FormGame.BlackStatus == StdIOState.NotRequesting && !FormGame.HasBlackManuallyMoved;
+                            btnWhiteReadMove.Enabled = false;
+                        }
+                        else
+                        {
+                            btnWhiteReadMove.Enabled = false;
+                            btnBlackReadMove.Enabled = false;
+                        }
+                    }
+                    else
+                    {
+                        rdbBlack.Enabled = true;
+                        rdbBlack.Checked = true;
+                        rdbWhite.Enabled = false;
+                        rdbWhite.Checked = false;
+
+                        btnWhiteReadMove.Enabled = FormGame.WhiteStatus == StdIOState.NotRequesting && !FormGame.HasWhiteManuallyMoved && FormGame.WhoseTurn == Player.White;
+                        btnBlackReadMove.Enabled = FormGame.BlackStatus == StdIOState.NotRequesting && !FormGame.HasBlackManuallyMoved && FormGame.WhoseTurn == Player.Black;
+                    }
+                }
+                else
+                {
+                    if (FormGame.WhoseTurn == Player.Black)
+                    {
+                        rdbBlack.Enabled = false;
+                        rdbBlack.Checked = true;
+                        rdbWhite.Enabled = false;
+                        rdbWhite.Checked = false;
+                    }
+                    else
+                    {
+                        rdbBlack.Enabled = false;
+                        rdbBlack.Checked = false;
+                        rdbWhite.Enabled = false;
+                        rdbWhite.Checked = true;
+                    }
+                    btnWhiteReadMove.Enabled = false;
+                    btnBlackReadMove.Enabled = false;
+                }
+            else if (FormGame.Mode == GameMode.BlackAuto)
+                if (FormGame.ProcedureStatus == ChessBoardGameProcedureState.Running)
+                {
+                    if (FormGame.CareWhoseTurnItIs)
+                    {
+                        if (FormGame.WhoseTurn == Player.Black)
+                        {
+                            rdbBlack.Enabled = false;
+                            rdbBlack.Checked = true;
+                            rdbWhite.Enabled = false;
+                            rdbWhite.Checked = false;
+                        }
+                        else
+                        {
+                            rdbBlack.Enabled = false;
+                            rdbBlack.Checked = false;
+                            rdbWhite.Enabled = true;
+                            rdbWhite.Checked = false;
+                        }
+                        if (FormGame.WhoseTurn == Player.Black)
+                        {
+                            btnBlackReadMove.Enabled = false;
+                            btnWhiteReadMove.Enabled = false;
+                        }
+                        else
+                        {
+                            btnWhiteReadMove.Enabled = FormGame.WhiteStatus == StdIOState.NotRequesting && !FormGame.HasWhiteManuallyMoved;
+                            btnBlackReadMove.Enabled = false;
+                        }
+                    }
+                    else
+                    {
+                        rdbBlack.Enabled = false;
+                        rdbBlack.Checked = false;
+                        rdbWhite.Enabled = true;
+                        rdbWhite.Checked = true;
+
+                        btnWhiteReadMove.Enabled = FormGame.WhiteStatus == StdIOState.NotRequesting && !FormGame.HasWhiteManuallyMoved && FormGame.WhoseTurn == Player.White;
+                        btnBlackReadMove.Enabled = FormGame.BlackStatus == StdIOState.NotRequesting && !FormGame.HasBlackManuallyMoved && FormGame.WhoseTurn == Player.Black;
+                    }
+                }
+                else
+                {
+                    if (FormGame.WhoseTurn == Player.Black)
+                    {
+                        rdbBlack.Enabled = false;
+                        rdbBlack.Checked = true;
+                        rdbWhite.Enabled = false;
+                        rdbWhite.Checked = false;
+                    }
+                    else
+                    {
+                        rdbBlack.Enabled = false;
+                        rdbBlack.Checked = false;
+                        rdbWhite.Enabled = false;
+                        rdbWhite.Checked = true;
+                    }
+                    btnWhiteReadMove.Enabled = false;
+                    btnBlackReadMove.Enabled = false;
+                }
+            else if (FormGame.Mode == GameMode.BothAuto)
+                if (FormGame.ProcedureStatus == ChessBoardGameProcedureState.Running)
+                {
+                    if (FormGame.CareWhoseTurnItIs)
+                    {
+                        if (FormGame.WhoseTurn == Player.Black)
+                        {
+                            rdbBlack.Enabled = false;
+                            rdbBlack.Checked = true;
+                            rdbWhite.Enabled = false;
+                            rdbWhite.Checked = false;
+                        }
+                        else
+                        {
+                            rdbBlack.Enabled = false;
+                            rdbBlack.Checked = false;
+                            rdbWhite.Enabled = false;
+                            rdbWhite.Checked = true;
+                        }
+
+                    }
+                    else
+                    {
+                        rdbBlack.Enabled = false;
+                        rdbBlack.Checked = FormGame.WhoseTurn == Player.Black;
+                        rdbWhite.Enabled = false;
+                        rdbWhite.Checked = FormGame.WhoseTurn == Player.White;
+                    }
+                    btnWhiteReadMove.Enabled = false;
+                    btnBlackReadMove.Enabled = false;
+                }
+                else
+                {
+                    if (FormGame.WhoseTurn == Player.Black)
+                    {
+                        rdbBlack.Enabled = false;
+                        rdbBlack.Checked = true;
+                        rdbWhite.Enabled = false;
+                        rdbWhite.Checked = false;
+                    }
+                    else
+                    {
+                        rdbBlack.Enabled = false;
+                        rdbBlack.Checked = false;
+                        rdbWhite.Enabled = false;
+                        rdbWhite.Checked = true;
+                    }
+                    btnWhiteReadMove.Enabled = false;
+                    btnBlackReadMove.Enabled = false;
+                }
+            else if (FormGame.Mode == GameMode.NotStarted)
+            {
+                rdbBlack.Enabled = false;
+                rdbBlack.Checked = FormGame.WhoseTurn == Player.Black;
+                rdbWhite.Enabled = false;
+                rdbWhite.Checked = FormGame.WhoseTurn == Player.White;
+
+                btnWhiteReadMove.Enabled = false;
+                btnBlackReadMove.Enabled = false;
+            }
+            if (frequentlyRefresh)
+            {
+                rdbBlack.Refresh();
+                rdbBlack.Refresh();
+                rdbWhite.Refresh();
+                rdbWhite.Refresh();
+
+                btnWhiteReadMove.Refresh();
+                btnBlackReadMove.Refresh();
             }
         }
 
@@ -188,7 +541,7 @@ namespace TheChessBoard
         {
             try
             {
-                FormGame.ParseAndApplyMove(txbMoveStr.Text, currentPlayer, out pieceJustCaptured);
+                FormGame.ManualMove(txbMoveStr.Text, currentPlayer, out pieceJustCaptured);
                 txbMoveStr.Clear();
             }
             catch (PgnException exception)
@@ -216,13 +569,7 @@ namespace TheChessBoard
         private void ckbDontCareWhoseTurnItIs_CheckedChanged(object sender, EventArgs e)
         {
             FormGame.CareWhoseTurnItIs = !ckbDontCareWhoseTurnItIs.Checked;
-            if (FormGame.CareWhoseTurnItIs)
-                DelimitSANPlayerIfNeeded();
-            else
-            {
-                rdbBlack.Enabled = true;
-                rdbWhite.Enabled = true;
-            }
+            DelimitPlayerIfNeeded();
             FormGame.ControlStatus = ChessBoardGameControlState.Idle;
         }
 
@@ -238,7 +585,8 @@ namespace TheChessBoard
 
         private MouseEventHandler SquareRightMouseButtonCurried(int Row, int File)
         {
-            return (sender, e) => {
+            return (sender, e) =>
+            {
                 if (e.Button.Equals(MouseButtons.Right))
                     SquareRightMouseButton(8 - Row, (File)File);
             };
@@ -253,8 +601,8 @@ namespace TheChessBoard
                     return;
                 if (DestinationMoves.Count == 1)
                     return;
-                var DestinationMovesCopy = new Dictionary<Button, List<MoreDetailedMove>>(DestinationMoves);
-                var aggregateResult = DestinationMovesCopy.Aggregate((a, b) => { return new KeyValuePair<Button, List<MoreDetailedMove>>(a.Key, a.Value.Union(b.Value).ToList()); });
+                //var DestinationMovesCopy = new Dictionary<Button, List<MoreDetailedMove>>(DestinationMoves);
+                var aggregateResult = DestinationMoves.Aggregate((a, b) => { return new KeyValuePair<Button, List<MoreDetailedMove>>(a.Key, a.Value.Union(b.Value).ToList()); });
 
                 MoveDisambiguationDialog disaDialog = new MoveDisambiguationDialog(aggregateResult.Value);
                 disaDialog.CallbackEvent += DisambiguationDone;
@@ -264,7 +612,7 @@ namespace TheChessBoard
 
         void DisambiguationDone(MoreDetailedMove move)
         {
-            FormGame.ApplyMove(move, true, out pieceJustCaptured);
+            FormGame.ManualMove(move, true, out pieceJustCaptured);
         }
 
         void SquareCancelSelect()
@@ -274,9 +622,12 @@ namespace TheChessBoard
 
         bool SquareClick(int currRank, File currFile, bool allowCancelSelect = true, bool allowMoveSelect = true)
         {
+            if (FormGame.Mode == GameMode.BothAuto && FormGame.ProcedureStatus == ChessBoardGameProcedureState.Running)
+                return false;
+
             if (FormGame.ProcedureStatus != ChessBoardGameProcedureState.Running)
             {
-                if(FormGame.ProcedureStatus == ChessBoardGameProcedureState.NotStarted)
+                if (FormGame.ProcedureStatus == ChessBoardGameProcedureState.NotStarted)
                     MessageBox.Show("游戏尚未开始，请选择模式后点击左侧“选择模式并开始”。", "游戏尚未开始", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
                 else
                     MessageBox.Show("游戏已经结束，请点击“重置”后重新开始。", "游戏已经结束", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
@@ -357,9 +708,61 @@ namespace TheChessBoard
             FormGame.ProcessWhiteStart();
         }
 
-        private void btnWhiteReadLine_Click(object sender, EventArgs e)
+        private void btnWhiteReadMove_Click(object sender, EventArgs e)
         {
-            FormGame.ProcessWhiteAllowOutputAndWait();
+            FormGame.ProcessAllowOutputAndWait(StdIOType.White);
+        }
+
+        private void btnBlackReadMove_Click(object sender, EventArgs e)
+        {
+            FormGame.ProcessAllowOutputAndWait(StdIOType.Black);
+        }
+
+        private void btnLoadWhiteAI_Click(object sender, EventArgs e)
+        {
+            InputExecCommandDialog inputDialog = new InputExecCommandDialog(Player.White);
+            inputDialog.CallbackEvent += (player, execPath, execArguments) =>
+            {
+                FormGame.LoadAIExec(player, execPath, execArguments);
+            };
+            inputDialog.ShowDialog();
+        }
+
+        private void btnLoadBlackAI_Click(object sender, EventArgs e)
+        {
+            InputExecCommandDialog inputDialog = new InputExecCommandDialog(Player.Black);
+            inputDialog.CallbackEvent += (player, execPath, execArguments) =>
+            {
+                FormGame.LoadAIExec(player, execPath, execArguments);
+            };
+            inputDialog.ShowDialog();
+        }
+
+        private void btnModeConfirm_Click(object sender, EventArgs e)
+        {
+            GameMode mode;
+            if (rdbBlackAuto.Checked)
+            {
+                if (rdbWhiteAuto.Checked)
+                    mode = GameMode.BothAuto;
+                else
+                    mode = GameMode.BlackAuto;
+            }
+            else
+            {
+                if (rdbWhiteAuto.Checked)
+                    mode = GameMode.WhiteAuto;
+                else
+                    mode = GameMode.Manual;
+            }
+            FormGame.Start(mode);
+        }
+
+        private void btnAllReset_Click(object sender, EventArgs e)
+        {
+            BusifyCursor();
+            FormGame.ResetGame();
+            RestoreCursor();
         }
 
         #endregion
@@ -367,20 +770,39 @@ namespace TheChessBoard
         #region FormGame 引发事件触发的方法
         private void AfterApplyMove()
         {
-            FormGame.ControlStatus = ChessBoardGameControlState.Idle;
+            //HistoryMovesBindingSource.DataSource = FormGame.GameMoves;
+            dgvHistoryMoves.Refresh();
         }
 
         private void FormGameProcedureStatusUpdatedSubscriber(StatusUpdatedEventArgs e)
         {
-            
+
             if (FormGame.ProcedureStatus == ChessBoardGameProcedureState.Running)
             {
-                if(e.UpdateImportant == true)
+                if (e.UpdateImportant == true)
                 {
                     // New game started
                     DestinationMoves = new Dictionary<Button, List<MoreDetailedMove>>();
+                    // History
+                    HistoryMovesBindingSource = new BindingSource();
+                    HistoryMovesBindingSource.DataSource = FormGame.GameMoves;
+                    dgvHistoryMoves.DataSource = HistoryMovesBindingSource;
+                    dgvHistoryMoves.Select();
+
                     FormGame.CareWhoseTurnItIs = !(ckbDontCareWhoseTurnItIs.Checked);
+                    btnLoadWhiteAI.Enabled = false;
+                    btnLoadBlackAI.Enabled = false;
+
+                    if (FormGame.WhiteStatus == StdIOState.NotStarted)
+                    {
+                        FormGame.ProcessWhiteStart();
+                    }
+                    if (FormGame.BlackStatus == StdIOState.NotStarted)
+                    {
+                        FormGame.ProcessBlackStart();
+                    }
                 }
+
                 btnModeConfirm.Enabled = false;
                 btnMove.Enabled = true;
                 pnlBlackMode.Enabled = false;
@@ -392,19 +814,25 @@ namespace TheChessBoard
             }
             else
             {
-                btnModeConfirm.Enabled = true;
                 btnMove.Enabled = false;
-                pnlBlackMode.Enabled = true;
-                pnlWhiteMode.Enabled = true;
-                btnModeConfirm.Enabled = true;
 
                 if (FormGame.ProcedureStatus == ChessBoardGameProcedureState.NotStarted)
                 {
-                    lblFormStatus.ForeColor = ColorNotStarted;
+                    lblFormStatus.ForeColor = ColorGameNotStarted;
                     lblFormStatusText.Text = "未开始";
+                    btnLoadWhiteAI.Enabled = true;
+                    btnLoadBlackAI.Enabled = true;
+
+                    btnModeConfirm.Enabled = true;
+                    pnlBlackMode.Enabled = true;
+                    pnlWhiteMode.Enabled = true;
                 }
                 else
                 {
+                    btnModeConfirm.Enabled = false;
+                    pnlBlackMode.Enabled = false;
+                    pnlWhiteMode.Enabled = false;
+
                     this.BeginInvoke(new Action(delegate { MessageBox.Show(e.Reason, "游戏结束", MessageBoxButtons.OK, MessageBoxIcon.Asterisk); }));
                     switch (FormGame.ProcedureStatus)
                     {
@@ -423,54 +851,111 @@ namespace TheChessBoard
                     }
                 }
             }
+
+            if (frequentlyRefresh)
+            {
+                btnLoadWhiteAI.Refresh();
+                btnLoadBlackAI.Refresh();
+                btnModeConfirm.Refresh();
+                btnMove.Refresh();
+                pnlBlackMode.Refresh();
+                pnlWhiteMode.Refresh();
+                btnModeConfirm.Refresh();
+                lblFormStatus.Refresh();
+                lblFormStatusText.Refresh();
+                dgvHistoryMoves.Refresh();
+            }
         }
 
         private void FormGameControlStatusUpdatedSubscriber(StatusUpdatedEventArgs e)
         {
             if (FormGame.ControlStatus == ChessBoardGameControlState.Idle || FormGame.ControlStatus == ChessBoardGameControlState.NotStarted || FormGame.ControlStatus == ChessBoardGameControlState.StdIORunning)
             {
+                // TODO : 可能需要提升效率
                 SquareCancelSelect();
             }
 
             if (FormGame.ControlStatus == ChessBoardGameControlState.Idle || FormGame.ControlStatus == ChessBoardGameControlState.Selected)
             {
                 SANPlayerChanged(null, null);
-                if (btnMove.Enabled == false)
-                    btnMove.Enabled = true;
+                if(FormGame.Mode != GameMode.BothAuto)
+                    if (btnMove.Enabled == false)
+                        btnMove.Enabled = true;
                 RestoreCursor();
             }
 
             if (FormGame.ControlStatus == ChessBoardGameControlState.StdIORunning)
             {
                 btnMove.Enabled = false;
-                BusifyCursor();
+                ArrowBusifyCursor();
             }
+            if (frequentlyRefresh)
+            { btnMove.Refresh(); }
         }
 
         private void FormGamePlayerIOStatusUpdatedSubscriber(StatusUpdatedEventArgs e)
         {
-            if(FormGame.WhiteStatus == StdIOState.NotLoaded)
+            if (FormGame.WhiteStatus == StdIOState.NotLoaded)
             {
                 rdbWhiteAuto.Enabled = false;
                 rdbWhiteManual.Checked = true;
-                lblWhiteStatus.ForeColor = ColorNotStarted;
+                lblWhiteStatus.ForeColor = ColorProcNotLoaded;
                 lblWhiteStatusText.Text = "未装载";
             }
-            else
+            else if (FormGame.WhiteStatus == StdIOState.NotStarted)
             {
                 rdbWhiteAuto.Enabled = true;
+                lblWhiteStatus.ForeColor = ColorProcNotStarted;
+                lblWhiteStatusText.Text = "未开始";
+            }
+            else if (FormGame.WhiteStatus == StdIOState.NotRequesting)
+            {
+                rdbWhiteAuto.Enabled = true;
+                lblWhiteStatus.ForeColor = ColorIdle;
+                lblWhiteStatusText.Text = "空闲";
+            }
+            else if (FormGame.WhiteStatus == StdIOState.Requesting)
+            {
+                rdbWhiteAuto.Enabled = true;
+                lblWhiteStatus.ForeColor = ColorBusy;
+                lblWhiteStatusText.Text = "请求中/阻塞";
             }
 
             if (FormGame.BlackStatus == StdIOState.NotLoaded)
             {
                 rdbBlackAuto.Enabled = false;
                 rdbBlackManual.Checked = true;
-                lblBlackStatus.ForeColor = ColorNotStarted;
+                lblBlackStatus.ForeColor = ColorProcNotLoaded;
                 lblBlackStatusText.Text = "未装载";
             }
-            else
+            else if (FormGame.BlackStatus == StdIOState.NotStarted)
             {
                 rdbBlackAuto.Enabled = true;
+                lblBlackStatus.ForeColor = ColorProcNotStarted;
+                lblBlackStatusText.Text = "未开始";
+            }
+            else if (FormGame.BlackStatus == StdIOState.NotRequesting)
+            {
+                rdbBlackAuto.Enabled = true;
+                lblBlackStatus.ForeColor = ColorIdle;
+                lblBlackStatusText.Text = "空闲";
+            }
+            else if (FormGame.BlackStatus == StdIOState.Requesting)
+            {
+                rdbBlackAuto.Enabled = true;
+                lblBlackStatus.ForeColor = ColorBusy;
+                lblBlackStatusText.Text = "请求中/阻塞";
+            }
+            if (frequentlyRefresh)
+            {
+                rdbWhiteAuto.Refresh();
+                rdbWhiteManual.Refresh();
+                lblWhiteStatus.Refresh();
+                lblWhiteStatusText.Refresh();
+                rdbBlackAuto.Refresh();
+                rdbBlackManual.Refresh();
+                lblBlackStatus.Refresh();
+                lblBlackStatusText.Refresh();
             }
         }
 
@@ -479,30 +964,37 @@ namespace TheChessBoard
 
             if (e == null || e.PropertyName == "BoardPrint")
             {
-                this.Invoke(new Action(() => { UpdateBoardButtons(); }));
+                UpdateBoardButtons();
             }
             if (e == null || e.PropertyName == "WhoseTurn")
             {
-                this.Invoke(new Action(() => { UpdateWhoseTurn(); }));
+                UpdateWhoseTurn();
             }
         }
 
-        
+
 
         public void UpdateBoardButtons()
         {
             var bp = FormGame.BoardPrint;
-            for (var i = 0; i < bp.Length; i++)
+            for (var i = 0; i < btnBoardSquares.Length; i++)
             {
                 btnBoardSquares[i].Text = bp[i].ToString();
+                btnBoardSquares[i].Refresh();
             }
+
+            txbFen.Text = FormGame.Game.GetFen();
+            if (frequentlyRefresh)
+            { txbFen.Refresh(); }
         }
 
         public void UpdateWhoseTurn()
         {
             var wt = FormGame.WhoseTurn;
             lblCurrentPlayer.Text = "当前执棋：" + (wt == Player.White ? "白" : "黑");
-            DelimitSANPlayerIfNeeded();
+            if (frequentlyRefresh)
+            { lblCurrentPlayer.Refresh(); }
+            DelimitPlayerIfNeeded();
         }
 
         void CleanSquareColor()
@@ -527,34 +1019,6 @@ namespace TheChessBoard
 
         }
 
-        private void btnLoadWhiteAI_Click(object sender, EventArgs e)
-        {
 
-        }
-
-        private void btnModeConfirm_Click(object sender, EventArgs e)
-        {
-            GameMode mode;
-            if(rdbBlackAuto.Checked)
-            {
-                if (rdbWhiteAuto.Checked)
-                    mode = GameMode.BothAuto;
-                else
-                    mode = GameMode.BlackAuto;
-            }
-            else
-            {
-                if (rdbWhiteAuto.Checked)
-                    mode = GameMode.WhiteAuto;
-                else
-                    mode = GameMode.Manual;
-            }
-            FormGame.Start(mode);
-        }
-
-        private void btnAllReset_Click(object sender, EventArgs e)
-        {
-            FormGame.ResetGame();
-        }
     }
 }

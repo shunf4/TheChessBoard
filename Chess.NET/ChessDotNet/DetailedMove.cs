@@ -1,6 +1,7 @@
 
 namespace ChessDotNet
 {
+
     public class DetailedMove : Move
     {
         public Piece Piece

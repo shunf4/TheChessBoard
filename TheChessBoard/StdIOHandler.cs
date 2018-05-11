@@ -62,14 +62,24 @@ namespace TheChessBoard
             proc.StartInfo.UseShellExecute = false;
             proc.StartInfo.RedirectStandardInput = true;
             proc.StartInfo.RedirectStandardOutput = true;
-            proc.StartInfo.CreateNoWindow = true;
+            proc.StartInfo.CreateNoWindow = false;
             proc.EnableRaisingEvents = true;
+
+            proc.Start();
+            if(!proc.HasExited)
+            {
+                proc.Kill();
+            }
 
             //当proc有行输出的时候（为什么一定要按行啊……flush不行吗……），加到尾部
             proc.OutputDataReceived += (sender, e) =>
             {
                 allowMoveHandle.WaitOne();
                 outputWaitHandle.Set();
+                if (proc.HasExited)
+                {
+                    return;
+                }
                 if (e.Data == null)
                 {
                     //(???)DataReceivedEventArgs 的 Data成员为空即读取完毕
@@ -80,7 +90,8 @@ namespace TheChessBoard
                 else
                 {
                     //outputWaitHandle.Set();
-                    _context.Post(delegate { LineProcess?.Invoke(e.Data); }, null);
+                    //_context.Post(delegate { LineProcess?.Invoke(e.Data); }, null);
+                    LineProcess?.Invoke(e.Data);
                     allowMoveHandle.Reset();
                 }
             };
@@ -88,22 +99,40 @@ namespace TheChessBoard
             proc.Exited += (sender, e) =>
             {
                 ProcStarted = false;
-                proc.CancelOutputRead();
+                try
+                {
+                    proc.CancelOutputRead();
+                }
+                catch (InvalidOperationException)
+                {
+                    ;
+                }
             };
         }
 
         public void Start()
         {
             ProcStarted = proc.Start();
+            allowMoveHandle.Reset();
+            outputWaitHandle.Reset();
             Watch.Reset();
             proc.BeginOutputReadLine();
         }
 
         public void Stop()
         {
-            proc.CancelOutputRead();
+            allowMoveHandle.Set();
+            outputWaitHandle.Set();
+            // proc.CancelOutputRead();
             Watch.Stop();
             ProcStarted = false;
+        }
+
+        public void Kill()
+        {
+            Stop();
+            if(!proc.HasExited)
+                proc.Kill();
         }
 
         public void AllowOutputAndWait()

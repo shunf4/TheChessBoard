@@ -4,10 +4,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{63F75B8E-D1AC-4F9A-B282-2907D4F7BA0B}</ProjectGuid>
+    <ProjectGuid>{B972F243-3AC7-4E70-8125-CD542428A1B2}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>TestConsoleApp1</RootNamespace>
-    <AssemblyName>TestConsoleApp1</AssemblyName>
+    <RootNamespace>EightQueen</RootNamespace>
+    <AssemblyName>EightQueen</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -42,11 +42,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TCA1.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Chess.NET\ChessDotNet\ChessDotNet.csproj">
+      <Project>{be2e6962-a2b9-4c04-9b93-011f51617166}</Project>
+      <Name>ChessDotNet</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

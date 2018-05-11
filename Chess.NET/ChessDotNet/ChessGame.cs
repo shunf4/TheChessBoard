@@ -331,6 +331,7 @@ namespace ChessDotNet
             gcd.CanBlackCastleKingSide = game.CanBlackCastleKingSide;
             gcd.CanBlackCastleQueenSide = game.CanBlackCastleQueenSide;
             gcd.EnPassant = null;
+            gcd.WhoseTurn = game.WhoseTurn;
             if (game._moves.Count > 0)
             {
                 DetailedMove last = game._moves.Last();
@@ -411,9 +412,9 @@ namespace ChessDotNet
                 Move primMove = new Move(new Position(data.EnPassant.File, data.WhoseTurn == Player.White ? 7 : 2),
                         new Position(data.EnPassant.File, data.WhoseTurn == Player.White ? 5 : 4),
                         ChessUtilities.GetOpponentOf(data.WhoseTurn));
-                bool causeCheck;
-                bool causeCheckmate;
-                WouldBeInCheckOrCheckmatedAfter(primMove, data.WhoseTurn, out causeCheck, out causeCheckmate);
+                bool causeCheck = false; // magic
+                bool causeCheckmate = false; // magic
+
                 MoreDetailedMove latestMove = new MoreDetailedMove(primMove,
                     new Pawn(ChessUtilities.GetOpponentOf(data.WhoseTurn)),
                     false,
@@ -664,7 +665,7 @@ namespace ChessDotNet
             return Board[8 - rank][(int)file];
         }
 
-        protected virtual void SetPieceAt(File file, int rank, Piece piece)
+        public virtual void SetPieceAt(File file, int rank, Piece piece)
         {
             Board[8 - rank][(int)file] = piece;
         }
@@ -773,6 +774,11 @@ namespace ChessDotNet
 
         public virtual MoveType ApplyMove(Move move, bool alreadyValidated, out Piece captured, bool probing = false)
         {
+            ChessGame copy = null;
+            if(!(move is MoreDetailedMove mdm && mdm.StoredSANString != null))
+            {
+                copy = new ChessGame(this);
+            }
             ChessUtilities.ThrowIfNull(move, "move");
             captured = null;
             if (!alreadyValidated && !IsValidMove(move))
@@ -818,6 +824,7 @@ namespace ChessDotNet
                     castle = ApplyCastle(move);
                     type |= MoveType.Castling;
                     isCapture = false;
+                    captured = null;
                 }
             }
             else if (movingPiece is Rook)
@@ -880,10 +887,16 @@ namespace ChessDotNet
                 {
                     throw new Exception("Two MoreDetailedMove differ.");
                 }
+                if(m.StoredSANString == null)
+                    m.GenerateSANString(copy);
                 AddMoreDetailedMove(m);
             }
             else
-                AddMoreDetailedMove(new MoreDetailedMove(move, movingPiece, isCapture, castle, captured, isEnpassant, IsInCheck(WhoseTurn), IsCheckmated(WhoseTurn)));
+            {
+                var mNew = new MoreDetailedMove(move, movingPiece, isCapture, castle, captured, isEnpassant, IsInCheck(WhoseTurn), IsCheckmated(WhoseTurn));
+                mNew.GenerateSANString(copy);
+                AddMoreDetailedMove(mNew);
+            }
             return type;
         }
 
@@ -1102,6 +1115,7 @@ namespace ChessDotNet
             gcd.CanWhiteCastleQueenSide = CanWhiteCastleQueenSide;
             gcd.CanBlackCastleKingSide = CanBlackCastleKingSide;
             gcd.CanBlackCastleQueenSide = CanBlackCastleQueenSide;
+            gcd.WhoseTurn = WhoseTurn;
             gcd.EnPassant = null;
             if (_moves.Count > 0)
             {
@@ -1130,6 +1144,7 @@ namespace ChessDotNet
             gcd.CanWhiteCastleQueenSide = CanWhiteCastleQueenSide;
             gcd.CanBlackCastleKingSide = CanBlackCastleKingSide;
             gcd.CanBlackCastleQueenSide = CanBlackCastleQueenSide;
+            gcd.WhoseTurn = WhoseTurn;
             gcd.EnPassant = null;
             if (_moves.Count > 0)
             {
@@ -1143,7 +1158,10 @@ namespace ChessDotNet
             gcd.FullMoveNumber = i_fullMoveNumber;
             ChessGame copy = new ChessGame(gcd);
             copy.ApplyMove(move, false, out Piece captured, true);
-
+            if(move is MoreDetailedMove m)
+            {
+                m.AssociatedGameAfterMove = copy;
+            }
             inCheck = copy.IsInCheck(player);
             checkmated = copy.IsCheckmated(player);
         }

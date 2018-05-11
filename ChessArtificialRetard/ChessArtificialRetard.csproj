@@ -4,10 +4,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{3F558D15-93D9-462B-B466-868FC5B2D855}</ProjectGuid>
+    <ProjectGuid>{9DF88491-F688-455A-A703-C77BFB0B557A}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>TestConsoleApp2</RootNamespace>
-    <AssemblyName>TestConsoleApp2</AssemblyName>
+    <RootNamespace>ChessArtificialRetard</RootNamespace>
+    <AssemblyName>ChessArtificialRetard</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -42,11 +42,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Retard.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TCA2.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Chess.NET\ChessDotNet\ChessDotNet.csproj">
+      <Project>{be2e6962-a2b9-4c04-9b93-011f51617166}</Project>
+      <Name>ChessDotNet</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

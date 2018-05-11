@@ -9,6 +9,12 @@ namespace ChessDotNet
             set;
         }
 
+        public ChessGame AssociatedGameAfterMove
+        {
+            get;
+            set;
+        }
+
         public Piece CapturedPiece
         {
             get;
@@ -31,6 +37,59 @@ namespace ChessDotNet
         {
             get;
             set;
+        }
+
+        private string _storedSANString
+        {
+            get;
+            set;
+        }
+
+        public string StoredSANString
+        {
+            get
+            {
+                return _storedSANString;
+            }
+        }
+
+        private string _storedFriendlyText
+        {
+            get;
+            set;
+        }
+
+        public string StoredFriendlyText
+        {
+            get
+            {
+                return _storedFriendlyText;
+            }
+        }
+
+        public override string FriendlyText
+        {
+            get
+            {
+                if (_storedFriendlyText == null)
+                {
+                    GenerateFriendlyText();
+                }
+                return _storedFriendlyText;
+            }
+        }
+
+        public string SANString
+        {
+            get
+            {
+                if (_storedSANString == null)
+                {
+                    ChessUtilities.ThrowIfNull(AssociatedGame, "AssociatedGame");
+                    GenerateSANString(AssociatedGame);
+                }
+                return _storedSANString;
+            }
         }
 
         protected MoreDetailedMove() { }
@@ -89,58 +148,47 @@ namespace ChessDotNet
             return !move1.Equals(move2);
         }
 
-        public override string FriendlyText
+        public void GenerateFriendlyText()
         {
-            get
+            var sb = new System.Text.StringBuilder();
+            sb.Append(Piece.GetFriendlyName());
+            sb.Append("从");
+            sb.Append(OriginalPosition.ToString());
+            sb.Append("到");
+            sb.Append(NewPosition.ToString());
+            if (IsCapture && CapturedPiece != null)
             {
-                var sb = new System.Text.StringBuilder();
-                sb.Append(Piece.GetFriendlyName());
-                sb.Append("从");
-                sb.Append(OriginalPosition.ToString());
-                sb.Append("到");
-                sb.Append(NewPosition.ToString());
-                if (IsCapture && CapturedPiece != null)
-                {
-                    sb.Append(", 吃");
-                    sb.Append(CapturedPiece.GetFriendlyName());
-                }
-                if (Promotion.HasValue)
-                {
-                    sb.Append(", 晋升为");
-                    sb.Append(ChessGame.OriginalMapPgnCharToPiece(Promotion.Value, Player).GetFriendlyName());
-                }
-                if (Castling.Equals(CastlingType.KingSide))
-                {
-                    sb.Append(", 王翼易位");
-                }
-                if (Castling.Equals(CastlingType.QueenSide))
-                {
-                    sb.Append(", 后翼易位");
-                }
-                if(IsEnpassant)
-                {
-                    sb.Append(", 吃过路兵");
-                }
-                if (IsCheckmate.HasValue && IsCheckmate.Value)
-                {
-                    sb.Append(", 将死");
-                } else if (IsChecking.HasValue && IsChecking.Value)
-                {
-                    sb.Append(", 将军");
-                }
-                return sb.ToString();
+                sb.Append(", 吃");
+                sb.Append(CapturedPiece.GetFriendlyName());
             }
+            if (Promotion.HasValue)
+            {
+                sb.Append(", 晋升为");
+                sb.Append(ChessGame.OriginalMapPgnCharToPiece(Promotion.Value, Player).GetFriendlyName());
+            }
+            if (Castling.Equals(CastlingType.KingSide))
+            {
+                sb.Append(", 王翼易位");
+            }
+            if (Castling.Equals(CastlingType.QueenSide))
+            {
+                sb.Append(", 后翼易位");
+            }
+            if(IsEnpassant)
+            {
+                sb.Append(", 吃过路兵");
+            }
+            if (IsCheckmate.HasValue && IsCheckmate.Value)
+            {
+                sb.Append(", 将死");
+            } else if (IsChecking.HasValue && IsChecking.Value)
+            {
+                sb.Append(", 将军");
+            }
+            this._storedFriendlyText = sb.ToString();
         }
 
-        public string SANString
-        {
-            get
-            {
-                ChessUtilities.ThrowIfNull(AssociatedGame, "AssociatedGame");
-                return GetSANString(AssociatedGame);
-            }
-        }
-        public string GetSANString(ChessGame gameBeforeTheMove)
+        public string GenerateSANString(ChessGame gameBeforeTheMove)
         {
             string SANResult;
             if (Castling.Equals(CastlingType.KingSide))
@@ -239,6 +287,7 @@ namespace ChessDotNet
             {
                 throw new System.ArgumentException("This move " + SANResult + " is not valid for gameBeforeTheMove.");
             }
+            this._storedSANString = SANResult;
             return SANResult;
         }
         
