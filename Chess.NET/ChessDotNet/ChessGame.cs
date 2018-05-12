@@ -893,7 +893,7 @@ namespace ChessDotNet
             }
             else
             {
-                var mNew = new MoreDetailedMove(move, movingPiece, isCapture, castle, captured, isEnpassant, IsInCheck(WhoseTurn), IsCheckmated(WhoseTurn));
+                var mNew = new MoreDetailedMove(move, movingPiece, isCapture, castle, captured, isEnpassant, IsInCheck(WhoseTurn, false), IsCheckmated(WhoseTurn, false));
                 mNew.GenerateSANString(copy);
                 AddMoreDetailedMove(mNew);
             }

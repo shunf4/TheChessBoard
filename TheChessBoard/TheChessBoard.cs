@@ -11,9 +11,11 @@ using System.Collections.ObjectModel;
 using ChessDotNet;
 using System.Diagnostics;
 using System.Threading;
+using System.Runtime.InteropServices;
 
 namespace TheChessBoard
 {
+
 
     public partial class TheChessBoard : Form
     {
@@ -23,8 +25,10 @@ namespace TheChessBoard
         private Color ButtonSquareColor = Control.DefaultBackColor;
         private Color ButtonSquareDownColor = SystemColors.ControlDark;
         private Color ButtonSquareSelectedColor = SystemColors.ControlDark;
-        private Color ButtonSquareAvailableColor = SystemColors.Info;
-        private Color ButtonSquareCheckedColor = Color.LightCoral;
+        private Color ButtonSquareAvailableColor = Color.FromArgb(220,255,220);
+        private Color ButtonSquareMoveColor = Color.FromArgb(245,245,220);
+        private Color ButtonSquareCheckedColor = Color.FromArgb(255, 220, 220);
+        private Color ButtonSquareCheckmatedColor = Color.Red;
 
         private Color ColorRunning = Color.FromArgb(0, 192, 0);
         private Color ColorGameNotStarted = Color.Gray;
@@ -34,6 +38,7 @@ namespace TheChessBoard
         private Color ColorProcNotLoaded = Color.FromArgb(192, 192, 192);
         private Color ColorProcNotStarted = Color.FromArgb(156, 200, 156);
         private Color ColorBusy = Color.FromArgb(255, 0, 0);
+        private Color ColorStop = Color.FromArgb(255, 0, 0);
         private Color ColorIdle = Color.FromArgb(0, 192, 0);
 
         private bool frequentlyRefresh = true;
@@ -49,8 +54,8 @@ namespace TheChessBoard
         Dictionary<Button, List<MoreDetailedMove>> DestinationMoves;
         BindingSource HistoryMovesBindingSource;
 
-        public static string FormName = "The Chess Board";
-        public static string FormVersion = "Alpha";
+        public static string FormName = ((System.Reflection.AssemblyTitleAttribute)(System.Reflection.Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(System.Reflection.AssemblyTitleAttribute), false)[0])).Title.ToString();
+        public static string FormVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
         Piece pieceJustCaptured;
 
@@ -85,43 +90,124 @@ namespace TheChessBoard
             var context = SynchronizationContext.Current;
             FormGame.LoadSynchronizationContext(context);
             FormGame.FormInvoke = Invoke;
+
+            RefreshHistoryMoveSourceReference();
         }
 
         #region 和控件有关的方法
         #region 和控件初始化有关的方法
 
+        class MyDataGridView : DataGridView
+        {
+            // https://stackoverflow.com/questions/910210/how-to-disable-ellipsis-of-cell-texts-in-a-windowsforms-datagridview
+            protected override void OnCellPainting(DataGridViewCellPaintingEventArgs e)
+            {
+                if (e.RowIndex != -1)
+                {
+                    base.OnCellPainting(e);
+                    return;
+                }
+
+                var isSelected = e.State.HasFlag(DataGridViewElementStates.Selected);
+
+                e.Paint(e.ClipBounds, DataGridViewPaintParts.Background
+                    //| DataGridViewPaintParts.Border
+                    //| DataGridViewPaintParts.ContentBackground
+                    //| DataGridViewPaintParts.ContentForeground
+                    | DataGridViewPaintParts.ErrorIcon
+                    | DataGridViewPaintParts.Focus
+                    | DataGridViewPaintParts.SelectionBackground);
+
+                using (Brush foreBrush = new SolidBrush(e.CellStyle.ForeColor),
+                    selectedForeBrush = new SolidBrush(e.CellStyle.SelectionForeColor))
+                {
+                    if (e.Value != null)
+                    {
+                        StringFormat strFormat = new StringFormat();
+                        strFormat.Trimming = StringTrimming.Character;
+                        var brush = isSelected ? selectedForeBrush : foreBrush;
+
+                        var fs = e.Graphics.MeasureString((string)e.Value, e.CellStyle.Font);
+                        var topPos = e.CellBounds.Top + ((e.CellBounds.Height - fs.Height) / 2);
+
+                        // I found that the cell text is drawn in the wrong position
+                        // for the first cell in the column header row, hence the 4px
+                        // adjustment
+                        var leftPos = e.CellBounds.X;
+                        if (e.RowIndex == -1 && e.ColumnIndex == 0) leftPos += 4;
+
+                        e.Graphics.DrawString((String)e.Value, e.CellStyle.Font,
+                            brush, leftPos, topPos, strFormat);
+                    }
+                }
+
+                e.Paint(e.ClipBounds, DataGridViewPaintParts.Border);
+                e.Handled = true;
+            }
+        }
+
+        private MyDataGridView dgvHistoryMoves;
         private void InitializeCustomComponent()
         {
             this.SuspendLayout();
+            this.groupBox4.SuspendLayout();
             InitializeButtonSquares();
 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ResumeLayout(false);
-            this.PerformLayout();
 
             if (true)
             {
                 FormClosing += (sender, e) =>
-                {/*
-                if (MessageBox.Show("确认要退出吗？", "退出确认", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
-                    e.Cancel = false;
-                else
-                    e.Cancel = true;*/
-
-                    FormGame.KillAllAndResetStatus();
+                {
+                    if (MessageBox.Show("确认要退出吗？", "退出确认", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+                    {
+                        e.Cancel = false;
+                        BusifyCursor();
+                        FormGame.KillAllAndResetStatus();
+                    }
+                    else
+                    {
+                        e.Cancel = true;
+                    }
                 };
             }
 
             // Log
             SetLog(string.Format(@"{{\rtf1\ansicpg936 \b {0} {1}\b0 \line 窗体控件设置完成\line}}", FormName, FormVersion));
 
+
+            // DataGridView 
+
+            // 
+            // dgvHistoryMoves
+            // 
+
+            dgvHistoryMoves = new MyDataGridView();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvHistoryMoves)).BeginInit();
+            this.dgvHistoryMoves.AllowUserToAddRows = false;
+            this.dgvHistoryMoves.AllowUserToDeleteRows = false;
+            this.dgvHistoryMoves.AllowUserToResizeRows = false;
+            this.dgvHistoryMoves.BackgroundColor = System.Drawing.SystemColors.ControlLight;
+            this.dgvHistoryMoves.ClipboardCopyMode = System.Windows.Forms.DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
+            this.dgvHistoryMoves.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dgvHistoryMoves.Location = new System.Drawing.Point(12, 26);
+            this.dgvHistoryMoves.Name = "dgvHistoryMoves";
+            this.dgvHistoryMoves.ReadOnly = true;
+            this.dgvHistoryMoves.RowHeadersVisible = false;
+            this.dgvHistoryMoves.RowTemplate.Height = 27;
+            this.dgvHistoryMoves.Size = new System.Drawing.Size(272, 367);
+            this.dgvHistoryMoves.TabIndex = 22;
+
             dgvHistoryMoves.AutoGenerateColumns = false;
-            dgvHistoryMoves.MultiSelect = false;
+            dgvHistoryMoves.MultiSelect = true;
             dgvHistoryMoves.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvHistoryMoves.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
             dgvHistoryMoves.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
-            dgvHistoryMoves.ColumnHeadersDefaultCellStyle.Font = new Font("微软雅黑", 11, FontStyle.Regular, GraphicsUnit.Pixel);
+            dgvHistoryMoves.ColumnHeadersDefaultCellStyle.Padding = new Padding(0, 0, 0, 0);
+            dgvHistoryMoves.ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.False;
+            dgvHistoryMoves.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dgvHistoryMoves.ColumnHeadersDefaultCellStyle.Font = new Font("微软雅黑", 13, FontStyle.Bold, GraphicsUnit.Pixel);
 
             dgvHistoryMoves.Columns.Add(new DataGridViewTextBoxColumn
             {
@@ -134,15 +220,15 @@ namespace TheChessBoard
             dgvHistoryMoves.Columns.Add(new DataGridViewTextBoxColumn
             {
                 HeaderText = "行动方",
-                Width = 55,
+                Width = 45,
                 ReadOnly = true,
                 Name = "PlayerString",
                 DataPropertyName = "PlayerString"
             });
             dgvHistoryMoves.Columns.Add(new DataGridViewTextBoxColumn
             {
-                HeaderText = "SAN字串",
-                Width = 60,
+                HeaderText = "SAN",
+                Width = 52,
                 ReadOnly = true,
                 Name = "SANString",
                 DataPropertyName = "SANString"
@@ -150,13 +236,33 @@ namespace TheChessBoard
             dgvHistoryMoves.Columns.Add(new DataGridViewTextBoxColumn
             {
                 HeaderText = "文字描述",
-                Width = 117,
+                Width = 114,
                 ReadOnly = true,
                 Name = "FriendlyText",
                 DataPropertyName = "FriendlyText"
             });
+            dgvHistoryMoves.SelectionChanged += (obj, e) =>
+            {
+                
+                BindingSource h = (BindingSource)dgvHistoryMoves.DataSource;
+                if (h == null)
+                    return;
+                BindingList<MoreDetailedMoveImitator> l = (BindingList<MoreDetailedMoveImitator>)h.DataSource;
+                if (l == null)
+                    return;
 
+                if (dgvHistoryMoves.SelectedRows.Count == 0)
+                    return;
 
+                UpdateBoardButtons(l[dgvHistoryMoves.SelectedRows.Cast<DataGridViewRow>().Max((x)=>x.Index)]);
+            };
+            this.groupBox4.Controls.Add(this.dgvHistoryMoves);
+            ((System.ComponentModel.ISupportInitialize)(this.dgvHistoryMoves)).EndInit();
+
+            groupBox4.ResumeLayout(false);
+            this.ResumeLayout(false);
+            groupBox4.PerformLayout();
+            this.PerformLayout();
         }
 
         private void InitializeButtonSquares()
@@ -419,7 +525,7 @@ namespace TheChessBoard
                             rdbBlack.Enabled = false;
                             rdbBlack.Checked = false;
                             rdbWhite.Enabled = true;
-                            rdbWhite.Checked = false;
+                            rdbWhite.Checked = true;
                         }
                         if (FormGame.WhoseTurn == Player.Black)
                         {
@@ -628,7 +734,7 @@ namespace TheChessBoard
             if (FormGame.ProcedureStatus != ChessBoardGameProcedureState.Running)
             {
                 if (FormGame.ProcedureStatus == ChessBoardGameProcedureState.NotStarted)
-                    MessageBox.Show("游戏尚未开始，请选择模式后点击左侧“选择模式并开始”。", "游戏尚未开始", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+                    MessageBox.Show("游戏尚未开始，请选择模式后点击左侧“开始”。", "游戏尚未开始", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
                 else
                     MessageBox.Show("游戏已经结束，请点击“重置”后重新开始。", "游戏已经结束", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
 
@@ -671,10 +777,16 @@ namespace TheChessBoard
 
             if (FormGame.ControlStatus == ChessBoardGameControlState.Idle || FormGame.ControlStatus == ChessBoardGameControlState.Selected)
             {
-                var validMoves = FormGame.Game.GetValidMoves(pos, false);
+                if (dgvHistoryMoves.SelectedRows.Count != 0 && dgvHistoryMoves.SelectedRows.Cast<DataGridViewRow>().Max((x) => x.Index) != dgvHistoryMoves.Rows.Count - 1 || dgvHistoryMoves.SelectedRows.Count == 0)
+                {
+                    dgvHistoryMoves.ClearSelection();
+                    dgvHistoryMoves.Rows[dgvHistoryMoves.Rows.Count - 1].Selected = true;
+                    return false;
+                }
                 var piece = FormGame.Game.GetPieceAt(pos);
                 if (piece != null)
                 {
+                    var validMoves = FormGame.Game.GetValidMoves(pos, false);
                     CleanSquareColor();
                     SelectedPosition = pos;
                     FormGame.ControlStatus = ChessBoardGameControlState.Selected;
@@ -701,11 +813,6 @@ namespace TheChessBoard
                 }
             }
             return false;
-        }
-
-        private void btnWhiteProcStart_Click(object sender, EventArgs e)
-        {
-            FormGame.ProcessWhiteStart();
         }
 
         private void btnWhiteReadMove_Click(object sender, EventArgs e)
@@ -762,6 +869,7 @@ namespace TheChessBoard
         {
             BusifyCursor();
             FormGame.ResetGame();
+            RefreshHistoryMoveSourceReference();
             RestoreCursor();
         }
 
@@ -770,8 +878,17 @@ namespace TheChessBoard
         #region FormGame 引发事件触发的方法
         private void AfterApplyMove()
         {
-            //HistoryMovesBindingSource.DataSource = FormGame.GameMoves;
+            dgvHistoryMoves.ClearSelection();
+            dgvHistoryMoves.Rows[dgvHistoryMoves.Rows.Count - 1].Selected = true;
             dgvHistoryMoves.Refresh();
+        }
+
+        private void RefreshHistoryMoveSourceReference()
+        {
+            HistoryMovesBindingSource = new BindingSource();
+            HistoryMovesBindingSource.DataSource = FormGame.GameMoves;
+            dgvHistoryMoves.DataSource = HistoryMovesBindingSource;
+            dgvHistoryMoves.Select();
         }
 
         private void FormGameProcedureStatusUpdatedSubscriber(StatusUpdatedEventArgs e)
@@ -784,23 +901,13 @@ namespace TheChessBoard
                     // New game started
                     DestinationMoves = new Dictionary<Button, List<MoreDetailedMove>>();
                     // History
-                    HistoryMovesBindingSource = new BindingSource();
-                    HistoryMovesBindingSource.DataSource = FormGame.GameMoves;
-                    dgvHistoryMoves.DataSource = HistoryMovesBindingSource;
-                    dgvHistoryMoves.Select();
+                    RefreshHistoryMoveSourceReference();
 
                     FormGame.CareWhoseTurnItIs = !(ckbDontCareWhoseTurnItIs.Checked);
                     btnLoadWhiteAI.Enabled = false;
                     btnLoadBlackAI.Enabled = false;
 
-                    if (FormGame.WhiteStatus == StdIOState.NotStarted)
-                    {
-                        FormGame.ProcessWhiteStart();
-                    }
-                    if (FormGame.BlackStatus == StdIOState.NotStarted)
-                    {
-                        FormGame.ProcessBlackStart();
-                    }
+                    this.Activate();
                 }
 
                 btnModeConfirm.Enabled = false;
@@ -808,6 +915,8 @@ namespace TheChessBoard
                 pnlBlackMode.Enabled = false;
                 pnlWhiteMode.Enabled = false;
                 btnModeConfirm.Enabled = false;
+                btnPauseCont.Enabled = (FormGame.Mode == GameMode.BothAuto);
+
 
                 lblFormStatus.ForeColor = ColorRunning;
                 lblFormStatusText.Text = "进行中";
@@ -815,7 +924,7 @@ namespace TheChessBoard
             else
             {
                 btnMove.Enabled = false;
-
+                btnPauseCont.Enabled = false;
                 if (FormGame.ProcedureStatus == ChessBoardGameProcedureState.NotStarted)
                 {
                     lblFormStatus.ForeColor = ColorGameNotStarted;
@@ -848,6 +957,10 @@ namespace TheChessBoard
                             lblFormStatus.ForeColor = ColorDraw;
                             lblFormStatusText.Text = "平局";
                             break;
+                        case ChessBoardGameProcedureState.Stopped:
+                            lblFormStatus.ForeColor = ColorStop;
+                            lblFormStatusText.Text = "终止";
+                            break;
                     }
                 }
             }
@@ -869,10 +982,11 @@ namespace TheChessBoard
 
         private void FormGameControlStatusUpdatedSubscriber(StatusUpdatedEventArgs e)
         {
-            if (FormGame.ControlStatus == ChessBoardGameControlState.Idle || FormGame.ControlStatus == ChessBoardGameControlState.NotStarted || FormGame.ControlStatus == ChessBoardGameControlState.StdIORunning)
+            if (FormGame.ControlStatus == ChessBoardGameControlState.Idle || FormGame.ControlStatus == ChessBoardGameControlState.NotStarted || FormGame.ControlStatus == ChessBoardGameControlState.StdIORunning || FormGame.ControlStatus == ChessBoardGameControlState.Stopped)
             {
                 // TODO : 可能需要提升效率
-                SquareCancelSelect();
+                if(e.UpdateImportant == false)
+                    SquareCancelSelect();
             }
 
             if (FormGame.ControlStatus == ChessBoardGameControlState.Idle || FormGame.ControlStatus == ChessBoardGameControlState.Selected)
@@ -961,7 +1075,6 @@ namespace TheChessBoard
 
         private void FormGamePropertyChangedSubscriber_UpdateUI(object sender, PropertyChangedEventArgs e)
         {
-
             if (e == null || e.PropertyName == "BoardPrint")
             {
                 UpdateBoardButtons();
@@ -977,9 +1090,78 @@ namespace TheChessBoard
         public void UpdateBoardButtons()
         {
             var bp = FormGame.BoardPrint;
+            MoreDetailedMove lastMove = null;
+            int oIndex = -1;
+            int dIndex = -1;
+            bool check = false;
+            bool checkmate = false;
+            if (FormGame.Game.Moves.Count >= 1)
+            {
+                lastMove = FormGame.Game.Moves.Last();
+                oIndex = (int)lastMove.OriginalPosition.File + (8-(int)lastMove.OriginalPosition.Rank) * 8;
+                dIndex = (int)lastMove.NewPosition.File + (8 - (int)lastMove.NewPosition.Rank) * 8;
+                check = lastMove.IsChecking.Value;
+                checkmate = lastMove.IsCheckmate.Value;
+            }
+            
             for (var i = 0; i < btnBoardSquares.Length; i++)
             {
                 btnBoardSquares[i].Text = bp[i].ToString();
+                if(i == oIndex || i == dIndex)
+                {
+                    btnBoardSquares[i].BackColor = ButtonSquareMoveColor;
+                }
+                else if(checkmate && ((lastMove.Player == Player.White && char.ToLower(bp[i]) == 'l') || (lastMove.Player == Player.Black && char.ToLower(bp[i]) == 'k')))
+                {
+                    btnBoardSquares[i].BackColor = ButtonSquareCheckmatedColor;
+                }
+                else if (check && ((lastMove.Player == Player.White && char.ToLower(bp[i]) == 'l') || (lastMove.Player == Player.Black && char.ToLower(bp[i]) == 'k')))
+                {
+                    btnBoardSquares[i].BackColor = ButtonSquareCheckedColor;
+                }
+                else
+                    btnBoardSquares[i].BackColor = ButtonSquareColor;
+                btnBoardSquares[i].Refresh();
+            }
+
+            txbFen.Text = FormGame.Game.GetFen();
+            if (frequentlyRefresh)
+            { txbFen.Refresh(); }
+        }
+
+        private void UpdateBoardButtons(MoreDetailedMoveImitator move)
+        {
+            var bp = move.BoardPrint;
+            MoreDetailedMove lastMove = move.AssociatedMoreDetailedMove;
+            int oIndex = -1;
+            int dIndex = -1;
+            bool check = false;
+            bool checkmate = false;
+            if (lastMove != null)
+            {
+                oIndex = (int)lastMove.OriginalPosition.File + (8 - (int)lastMove.OriginalPosition.Rank) * 8;
+                dIndex = (int)lastMove.NewPosition.File + (8 - (int)lastMove.NewPosition.Rank) * 8;
+                check = lastMove.IsChecking.Value;
+                checkmate = lastMove.IsCheckmate.Value;
+            }
+
+            for (var i = 0; i < btnBoardSquares.Length; i++)
+            {
+                btnBoardSquares[i].Text = bp[i].ToString();
+                if (i == oIndex || i == dIndex)
+                {
+                    btnBoardSquares[i].BackColor = ButtonSquareMoveColor;
+                }
+                else if (checkmate && ((lastMove.Player == Player.White && char.ToLower(bp[i]) == 'l') || (lastMove.Player == Player.Black && char.ToLower(bp[i]) == 'k')))
+                {
+                    btnBoardSquares[i].BackColor = ButtonSquareCheckmatedColor;
+                }
+                else if (check && ((lastMove.Player == Player.White && char.ToLower(bp[i]) == 'l') || (lastMove.Player == Player.Black && char.ToLower(bp[i]) == 'k')))
+                {
+                    btnBoardSquares[i].BackColor = ButtonSquareCheckedColor;
+                }
+                else
+                    btnBoardSquares[i].BackColor = ButtonSquareColor;
                 btnBoardSquares[i].Refresh();
             }
 
@@ -1019,6 +1201,24 @@ namespace TheChessBoard
 
         }
 
+        private void btnPauseCont_Click(object sender, EventArgs e)
+        {
+            FormGame.Stop();
+        }
 
+        private void btnAbout_Click(object sender, EventArgs e)
+        {
+            cmsAbout.Show(btnAbout, new Point(0, btnAbout.Height));
+        }
+
+        private void smiAbout_Click(object sender, EventArgs e)
+        {
+            new AboutBox.AboutBox { Owner = this }.ShowDialog();
+        }
+
+        private void smiQuote_Click(object sender, EventArgs e)
+        {
+            new QuoteBox { Owner = this }.ShowDialog();
+        }
     }
 }

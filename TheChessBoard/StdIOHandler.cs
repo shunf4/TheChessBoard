@@ -12,6 +12,7 @@ using System.Windows.Forms;
 namespace TheChessBoard
 {
     public delegate void LineProcessorHandler(string line);
+    public delegate void ProcessExitedHandler();
 
     public class StdIOHandler : INotifyPropertyChanged
     {
@@ -27,6 +28,7 @@ namespace TheChessBoard
         Process proc;
 
         public event LineProcessorHandler LineProcess;
+        public event ProcessExitedHandler ProcessExited;
         SynchronizationContext _context = SynchronizationContext.Current;
 
         public SynchronizationContext Context
@@ -53,9 +55,14 @@ namespace TheChessBoard
             set { _procStarted = value; NotifyPropertyChanged("ProcStarted"); }
         }
 
-        public StdIOHandler(string ExecPath, string ExecArguments)
+        public string Description
+        { get; private set; }
+
+        public StdIOHandler(string ExecPath, string ExecArguments, string description = null)
         {
             proc = new Process();
+
+            Description = description ?? "Process";
 
             proc.StartInfo.FileName = ExecPath;
             proc.StartInfo.Arguments = ExecArguments;
@@ -65,6 +72,9 @@ namespace TheChessBoard
             proc.StartInfo.CreateNoWindow = false;
             proc.EnableRaisingEvents = true;
 
+                //TODO : 异常退出的情况
+                //TODO : 错误重走的情况
+                //TODO : 日志
             proc.Start();
             if(!proc.HasExited)
             {
@@ -76,23 +86,17 @@ namespace TheChessBoard
             {
                 allowMoveHandle.WaitOne();
                 outputWaitHandle.Set();
+                allowMoveHandle.Reset();
                 if (proc.HasExited)
                 {
                     return;
                 }
                 if (e.Data == null)
                 {
-                    //(???)DataReceivedEventArgs 的 Data成员为空即读取完毕
-                    //waitHandle用于计时
-                    MessageBox.Show("<null>");
-                    Watch.Stop();
                 }
                 else
                 {
-                    //outputWaitHandle.Set();
-                    //_context.Post(delegate { LineProcess?.Invoke(e.Data); }, null);
                     LineProcess?.Invoke(e.Data);
-                    allowMoveHandle.Reset();
                 }
             };
 
@@ -105,8 +109,9 @@ namespace TheChessBoard
                 }
                 catch (InvalidOperationException)
                 {
-                    ;
+                    Trace.TraceWarning("取消 " + Description + " 的输出流错误，可能原来未开启，或这一操作已经完成。");
                 }
+                ProcessExited?.Invoke();
             };
         }
 
@@ -119,18 +124,25 @@ namespace TheChessBoard
             proc.BeginOutputReadLine();
         }
 
-        public void Stop()
+        public void PrepareKill()
         {
             allowMoveHandle.Set();
             outputWaitHandle.Set();
-            // proc.CancelOutputRead();
+            try
+            {
+                proc.CancelOutputRead();
+            }
+            catch (InvalidOperationException)
+            {
+                Trace.TraceWarning("取消 " + Description + " 的输出流错误，可能原来未开启，或这一操作已经完成。");
+            }
             Watch.Stop();
             ProcStarted = false;
         }
 
         public void Kill()
         {
-            Stop();
+            PrepareKill();
             if(!proc.HasExited)
                 proc.Kill();
         }
@@ -143,11 +155,12 @@ namespace TheChessBoard
             Watch.Stop();
         }
 
-        public void Write(string str)
+        public void WriteLine(string str)
         {
             if(!ProcStarted)
             {
-                throw new ApplicationException("Process not started.");
+                Trace.TraceWarning(Description + " 已经退出，无法再写入 " + str + "。");
+                return;
             }
 
             proc.StandardInput.WriteLine(str);

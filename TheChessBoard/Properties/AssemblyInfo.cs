@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // 有关程序集的一般信息由以下
 // 控制。更改这些特性值可修改
 // 与程序集关联的信息。
-[assembly: AssemblyTitle("The Chess Board")]
-[assembly: AssemblyDescription("用于人工智能课程的象棋AI平台")]
+[assembly: AssemblyTitle("The Chess Board Alpha")]
+[assembly: AssemblyDescription("用于人工智能课程的象棋 AI 平台")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("象棋委员会 (The Chess Board)")]
-[assembly: AssemblyProduct("TheChessBoard")]
-[assembly: AssemblyCopyright("Copyright ©  2018")]
+[assembly: AssemblyProduct("The Chess Board")]
+[assembly: AssemblyCopyright("MIT")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

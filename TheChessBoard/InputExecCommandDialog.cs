@@ -52,5 +52,17 @@ namespace TheChessBoard
             this.DialogResult = DialogResult.OK;
             CallbackEvent?.Invoke(CurrPlayer, txbExecPath.Text, txbExecArguments.Text);
         }
+
+        private void txbFileDialogExec_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog dialog = new OpenFileDialog();
+            dialog.Filter =
+               "可执行文件 (*.exe)|*.exe|All files (*.*)|*.*";
+            dialog.Title = "选择可执行文件";
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                txbExecPath.Text = dialog.FileName;
+            }
+        }
     }
 }

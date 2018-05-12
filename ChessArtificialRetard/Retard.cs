@@ -46,6 +46,7 @@ namespace ChessArtificialRetard
         static ChessGame Game;
         static Player MyPlayer;
 
+        static char[] errorChar = new char[] { '!', '"', '$', '%', '&', '\'', '(', ')', '*', ',', '-', '.', '/' };
         static bool MyTurn()
         {
             ReadOnlyCollection<MoreDetailedMove> validMoves = Game.GetValidMoves(MyPlayer);
@@ -61,8 +62,25 @@ namespace ChessArtificialRetard
                 var random = new Random();
                 var k = random.Next(0, validMoves.Count);
                 var move = validMoves[k];
-                Console.Out.WriteLine(move.GenerateSANString(Game));
-                Trace.WriteLine(move.StoredSANString);
+                var x = random.Next(0, 100);
+                string targetString = move.GenerateSANString(Game);
+                if (x > 94)
+                {
+                    Trace.WriteLine("Retard Breaks.");
+                    targetString = targetString.Insert(random.Next(0, targetString.Length), (errorChar[random.Next(0, errorChar.Length)]).ToString());
+                }
+                Console.Out.WriteLine(targetString);
+                Trace.WriteLine("My Move: " + targetString);
+
+                if (x > 94)
+                {
+                    string invalidReceive = Console.In.ReadLine();
+                    if (invalidReceive != ".")
+                        throw new ArgumentException("Invalidation prompt is not `.`");
+                    //System.Threading.Thread.Sleep(3000);
+                    Console.Out.WriteLine(move.SANString);
+                    Trace.WriteLine("My Re-Move: " + targetString);
+                }
 
                 MoveType mt = Game.ApplyMove(move, true);
                 if (mt == MoveType.Invalid)
@@ -79,7 +97,7 @@ namespace ChessArtificialRetard
             string sanString = Console.In.ReadLine();
             if (sanString == null)
                 return false;
-            Trace.WriteLine(sanString);
+            Trace.WriteLine("Opponent Move: " + sanString);
             var move = PgnMoveReader.ParseMove(sanString, ChessUtilities.GetOpponentOf(MyPlayer), Game);
             MoveType mt = Game.ApplyMove(move, true);
             if(mt == MoveType.Invalid)
@@ -90,11 +108,28 @@ namespace ChessArtificialRetard
             return true;
         }
 
+        class MyTraceListener : TraceListener
+        {
+            public MyTraceListener()
+            {
+            }
+
+            public override void Write(string sth)
+            {
+                Console.Error.Write(sth);
+            }
+
+            public override void WriteLine(string sth)
+            {
+                Console.Error.WriteLine("[STDERR] " + sth);
+            }
+        };
+
         static void Main(string[] args)
         {
-            Trace.Listeners.Add(new TextWriterTraceListener(Console.Error));
+            Trace.Listeners.Add(new MyTraceListener());
             //Trace.Listeners.Clear();
-            Trace.WriteLine("Retard");
+            Trace.WriteLine("Hi, I'm Retard. Please input white/black.");
             GameCreationData gcd = new GameCreationData
             {
                 Board = new Piece[8][]

@@ -1,3 +1,4 @@
+// 用 Form.Invoke 的主线程调用方式，更流畅
 #define ALTERNATIVE_SAFELY_UPDATEUI
 
 using System;
@@ -12,6 +13,7 @@ using System.Runtime.CompilerServices;
 using ChessDotNet.Pieces;
 using System.Diagnostics;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace TheChessBoard
 {
@@ -22,7 +24,9 @@ namespace TheChessBoard
         public string PlayerString { get; set; }
         public string SANString { get; set; }
         public string FriendlyText { get; set; }
-        public MoreDetailedMoveImitator(int index, MoreDetailedMove m)
+        public char[] BoardPrint { get; set; }
+        public MoreDetailedMove AssociatedMoreDetailedMove { get; set; }
+        public MoreDetailedMoveImitator(int index, MoreDetailedMove m, char[] boardPrint)
         {
             Index = index;
             switch (m.Player)
@@ -36,9 +40,11 @@ namespace TheChessBoard
             }
             SANString = m.SANString;
             FriendlyText = m.FriendlyText;
+            BoardPrint = boardPrint;
+            AssociatedMoreDetailedMove = m;
         }
 
-        public MoreDetailedMoveImitator(int index, Player player, string sanString, string friendlyText)
+        public MoreDetailedMoveImitator(int index, Player player, string sanString, string friendlyText, char[] boardPrint)
         {
             Index = index;
             switch (player)
@@ -52,10 +58,9 @@ namespace TheChessBoard
             }
             SANString = sanString;
             FriendlyText = friendlyText;
-        }
+            BoardPrint = boardPrint;
 
-        public MoreDetailedMoveImitator(KeyValuePair<int, MoreDetailedMove> kv) : this(kv.Key, kv.Value)
-        { }
+        }
     }
 
     public enum SquareColor
@@ -69,13 +74,15 @@ namespace TheChessBoard
         NotStarted,
         Idle,
         Selected,
-        StdIORunning
+        StdIORunning,
+        Stopped
     }
 
     public enum ChessBoardGameProcedureState
     {
         NotStarted,
         Running,
+        Stopped,
         WhiteWins,
         BlackWins,
         Draw
@@ -153,6 +160,7 @@ namespace TheChessBoard
 
         void Init()
         {
+            Trace.TraceInformation("棋盘游戏开始初始化。");
             SetControlStatus(ChessBoardGameControlState.NotStarted, true);
             SetProcedureStatus(ChessBoardGameProcedureState.NotStarted, true);
             _hasWhiteManuallyMoved = false;
@@ -166,17 +174,27 @@ namespace TheChessBoard
             _updateWatchLoopLock.Reset();
 
             GameMoves = new BindingList<MoreDetailedMoveImitator>();
-            GameMoves.Add(new MoreDetailedMoveImitator(0, Player.None, " - ", "开局"));
+            GameMoves.Add(new MoreDetailedMoveImitator(0, Player.None, " - ", "开局", BoardPrint));
 
             InvokeAllUpdates();
+            Trace.TraceInformation("棋盘游戏初始化完成。");
         }
 
         public void Start(GameMode mode)
         {
+            if (WhiteStatus == StdIOState.NotStarted)
+            {
+                ProcessWhiteStart();
+            }
+            if (BlackStatus == StdIOState.NotStarted)
+            {
+                ProcessBlackStart();
+            }
             SetControlStatus(ChessBoardGameControlState.Idle, true);
             SetProcedureStatus(ChessBoardGameProcedureState.Running, true);
             Mode = mode;
             InvokeAllUpdates();
+            Trace.TraceInformation("游戏开始，模式：" + Mode.ToString());
             InvokeNextMoveRequest(WhoseTurn, null);
         }
 
@@ -185,6 +203,8 @@ namespace TheChessBoard
             ResetGame();
             WhiteIO.LineProcess -= _whiteLineProcess;
             BlackIO.LineProcess -= _blackLineProcess;
+            WhiteIO.ProcessExited -= _whiteProcessExited;
+            BlackIO.ProcessExited -= _blackProcessExited;
             WhiteIO.Dispose();
             BlackIO.Dispose();
             WhiteIO = null;
@@ -193,7 +213,10 @@ namespace TheChessBoard
 
         public void ResetGame(GameCreationData gameCreationData)
         {
+            Trace.TraceInformation("正重置游戏，残余进程清理中……");
             KillAllAndResetStatus();
+            Trace.TraceInformation("残余进程清理完成。");
+
             Game = new ChessGame(gameCreationData);
             Init();
             InvokeAllUpdates();
@@ -321,20 +344,61 @@ namespace TheChessBoard
                 uiLock.Set();
             _updateWatchLoopLock.Set();
 
-            Thread.Sleep(100);
+            Thread.Sleep(200);
             if(_allThreadsDoneLocks.Count > 0)
-                WaitHandle.WaitAll(_allThreadsDoneLocks.Where((m)=>m!=null).ToArray(), 1000);   //Time
+            //WaitHandle.WaitAll(_allThreadsDoneLocks.Where((m)=>m!=null).ToArray(), 1000);   //Time
+            {
+                foreach(var m in _allThreadsDoneLocks)
+                {
+                    m?.WaitOne(1000);
+                }
+            }
 
             WhiteIO?.Kill();
             BlackIO?.Kill();
 
-            _whiteStatus = _whiteStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotStarted;
-            _blackStatus = _blackStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotStarted;
-            _controlStatus = ChessBoardGameControlState.NotStarted;
-            _procedureStatus = ChessBoardGameProcedureState.NotStarted;
+            WhiteStatus = _whiteStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotStarted;
+            BlackStatus = _blackStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotStarted;
+            ControlStatus = ChessBoardGameControlState.NotStarted;
+            ProcedureStatus = ChessBoardGameProcedureState.NotStarted;
         }
 
-#endregion
+        public void Stop()
+        {
+            Trace.TraceInformation("游戏正在停止，清理残余进程……");
+            _whiteStatus = _whiteStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotRequesting;
+            _blackStatus = _blackStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotRequesting;
+            _controlStatus = ChessBoardGameControlState.Stopped;
+            _procedureStatus = ChessBoardGameProcedureState.Stopped;
+            foreach (var uiLock in _updateUIDoneAfterMoveLocks)
+                uiLock.Set();
+            _updateWatchLoopLock.Set();
+
+            Thread.Sleep(200);
+            if (_allThreadsDoneLocks.Count > 0)
+            //WaitHandle.WaitAll(_allThreadsDoneLocks.Where((m) => m != null).ToArray(), 1000);   //Time
+            {
+                try
+                {
+                    foreach (var m in _allThreadsDoneLocks)
+                    {
+                        m?.WaitOne(1000);
+                    }
+                }catch(InvalidOperationException e)
+                {
+                    Trace.TraceError("清理进程错误：" + e.Message + Environment.NewLine + e.StackTrace);
+                }
+            }
+            Trace.TraceInformation("残余进程清理完成。");
+            WhiteStatus = _whiteStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotRequesting;
+            BlackStatus = _blackStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotRequesting;
+            ControlStatus = ChessBoardGameControlState.Stopped;
+            SetProcedureStatus(ChessBoardGameProcedureState.Stopped, true, "游戏被终止。");
+
+            System.Windows.Forms.Application.DoEvents();
+        }
+
+        #endregion
 
         public ChessGame Game;
 
@@ -413,7 +477,7 @@ namespace TheChessBoard
             set
             {
                 _controlStatus = value;
-
+                //Trace.TraceInformation("当前窗体控件状态：" + value.ToString());
                 if (_context != null)
 #if !ALTERNATIVE_SAFELY_UPDATEUI
                     _context?.Post((obj) => GameControlStatusUpdated?.Invoke(new StatusUpdatedEventArgs()), null);
@@ -431,7 +495,7 @@ namespace TheChessBoard
             set
             {
                 _procedureStatus = value;
-
+                Trace.TraceInformation("当前游戏进程状态：" + value.ToString());
                 if (_context != null)
 #if !ALTERNATIVE_SAFELY_UPDATEUI
                     _context?.Post((obj) => GameProcedureStatusUpdated?.Invoke(new StatusUpdatedEventArgs()), null);
@@ -450,6 +514,8 @@ namespace TheChessBoard
             set
             {
                 _whiteStatus = value;
+                if(value != StdIOState.NotRequesting && value != StdIOState.Requesting)
+                    Trace.TraceInformation("当前白 AI 状态：" + value.ToString());
                 if (_context != null)
 #if !ALTERNATIVE_SAFELY_UPDATEUI
                     _context?.Post((obj) => PlayerIOStatusUpdated?.Invoke(new StatusUpdatedEventArgs()), null);
@@ -468,6 +534,8 @@ namespace TheChessBoard
             set
             {
                 _blackStatus = value;
+                if (value != StdIOState.NotRequesting && value != StdIOState.Requesting)
+                    Trace.TraceInformation("当前黑 AI 状态：" + value.ToString());
                 if (_context != null)
 #if !ALTERNATIVE_SAFELY_UPDATEUI
                     _context?.Post((obj) => PlayerIOStatusUpdated?.Invoke(new StatusUpdatedEventArgs()), null);
@@ -483,6 +551,7 @@ namespace TheChessBoard
         public void SetProcedureStatus(ChessBoardGameProcedureState pState, bool updateImportant, string reason = null)
         {
             _procedureStatus = pState;
+            Trace.TraceInformation("当前游戏进程状态：" + (updateImportant ? @"\b " : "") + pState.ToString() + (updateImportant ? @"\b0 " : "") + "，" + @"因为：" + (reason != "" && reason != null ? reason : "无"));
             if (_context != null)
 #if !ALTERNATIVE_SAFELY_UPDATEUI
                 _context?.Post((obj) => GameProcedureStatusUpdated?.Invoke(new StatusUpdatedEventArgs(updateImportant, reason)), null);
@@ -497,6 +566,7 @@ namespace TheChessBoard
         public void SetControlStatus(ChessBoardGameControlState cState, bool updateImportant, string reason = null)
         {
             _controlStatus = cState;
+            //Trace.TraceInformation("当前窗体控件状态：" + (updateImportant?@"\b ":"") + cState.ToString() + (updateImportant ? @"\b0 " : "") + "，" + @"因为：" + (reason != "" && reason != null ? reason : "无"));
             if (_context != null)
 #if !ALTERNATIVE_SAFELY_UPDATEUI
                 _context?.Post((obj) => GameControlStatusUpdated?.Invoke(new StatusUpdatedEventArgs(updateImportant, reason)), null);
@@ -614,7 +684,7 @@ namespace TheChessBoard
             Move move = PgnMoveReader.ParseMove(moveInStr, player, Game);
             var moveResult = ApplyMove(move, false, out captured);
             if (moveResult == MoveType.Invalid)
-                throw new ArgumentException("Move Invalid.");
+                throw new PgnException("Move Invalid.");
             return moveResult;
         }
 
@@ -643,18 +713,21 @@ namespace TheChessBoard
 
         public MoveType ManualMove(Move move, bool alreadyValidated, out Piece captured)
         {
+            SetControlStatus(ChessBoardGameControlState.Idle, updateImportant: false);  //To clean squares
             MoveType moveType = ApplyMove(move, alreadyValidated, out captured);
+            Trace.TraceInformation((move.Player == Player.White ? "白方" : "黑方") + "手动走子：" + Game.Moves.Last().SANString);
             if (move.Player == Player.White)
                 _hasWhiteManuallyMoved = true;
             else
                 _hasBlackManuallyMoved = true;
-
             return moveType;
         }
 
         public MoveType ManualMove(string moveInStr, Player player, out Piece captured)
         {
+            SetControlStatus(ChessBoardGameControlState.Idle, updateImportant: false);  //To clean squares
             MoveType moveType = ParseAndApplyMove(moveInStr, player, out captured);
+            Trace.TraceInformation((player == Player.White ? "白方" : "黑方") + " SAN 走子：" + Game.Moves.Last().SANString);
             if (player == Player.White)
                 _hasWhiteManuallyMoved = true;
             else
@@ -665,7 +738,7 @@ namespace TheChessBoard
         public MoveType ApplyMove(Move move, bool alreadyValidated, out Piece captured)
         {
             var moveResult = Game.ApplyMove(move, alreadyValidated, out captured);
-            
+            var boardPrintBackup = BoardPrint;
 
             if (moveResult == MoveType.Invalid)
                 throw new ArgumentException("Move Invalid.");
@@ -674,7 +747,7 @@ namespace TheChessBoard
             _updateUIDoneAfterMoveLocks.Add(_updateUIDoneAfterMoveLock);
 
 
-            NotifyPropertyChanged(new String[] { "BoardPrint", "WhoseTurn", "GameMoves" }, _updateUIDoneAfterMoveLock);
+            NotifyPropertyChanged(new String[] { "WhoseTurn", "GameMoves" }, _updateUIDoneAfterMoveLock);
 
             if (Game.Moves.Last().StoredSANString == null)
             {
@@ -686,32 +759,37 @@ namespace TheChessBoard
 
             if (move.Player == Player.White)
             {
-                if(BlackStatus == StdIOState.NotRequesting && !(HasBlackManuallyMoved))
-                    BlackIO.Write(Game.Moves.Last().StoredSANString);
+                if (BlackStatus == StdIOState.NotRequesting && !(HasBlackManuallyMoved))
+                {
+                    BlackIO.WriteLine(Game.Moves.Last().StoredSANString);
+                    Trace.TraceInformation("向黑 AI 发送：" + Game.Moves.Last().SANString);
+                }
             }
             else
             {
                 if (WhiteStatus == StdIOState.NotRequesting && !(HasWhiteManuallyMoved))
-                    WhiteIO?.Write(Game.Moves.Last().StoredSANString);
+                {
+                    WhiteIO?.WriteLine(Game.Moves.Last().StoredSANString);
+                    Trace.TraceInformation("向白 AI 发送：" + Game.Moves.Last().SANString);
+                }
             }
 
-            ControlStatus = ChessBoardGameControlState.Idle;
+            SetControlStatus(ChessBoardGameControlState.Idle, true);
             if (_context != null)
 #if !ALTERNATIVE_SAFELY_UPDATEUI
             {
                 _context?.Post((obj) => AppliedMove?.Invoke(), null);
-                GameMoves.Add(new MoreDetailedMoveImitator(Game.Moves.Count, Game.Moves.Last()));
+                GameMoves.Add(new MoreDetailedMoveImitator(Game.Moves.Count, Game.Moves.Last(), boardPrintBackup));
             }
 #else
-                FormInvoke(new Action(delegate { GameMoves.Add(new MoreDetailedMoveImitator(Game.Moves.Count, Game.Moves.Last())); AppliedMove?.Invoke();  }));
+                FormInvoke(new Action(() => { GameMoves.Add(new MoreDetailedMoveImitator(Game.Moves.Count, Game.Moves.Last(), boardPrintBackup)); AppliedMove?.Invoke();  }));
 #endif
             else
             {
-                GameMoves.Add(new MoreDetailedMoveImitator(Game.Moves.Count, Game.Moves.Last()));
+                GameMoves.Add(new MoreDetailedMoveImitator(Game.Moves.Count, Game.Moves.Last(), boardPrintBackup));
                 AppliedMove?.Invoke();
             }
 
-            System.Windows.Forms.Application.DoEvents();
             GameProcedureStatusUpdate();
 
             InvokeNextMoveRequest(ChessUtilities.GetOpponentOf(move.Player), _updateUIDoneAfterMoveLock);
@@ -819,34 +897,123 @@ namespace TheChessBoard
 #region 和两个AI进程有关的方法
         private void _whiteLineProcess(string sanString)
         {
+            bool error = false;
+
             _updateWatchLoopLock.Set();
             if (ProcedureStatus != ChessBoardGameProcedureState.Running)
                 return;
             var mre = new ManualResetEvent(false);
             _allThreadsDoneLocks.Add(mre);
-            ParseAndApplyMove(sanString, Player.White, out Piece captured);
+            Trace.TraceInformation("白 AI 已输出：" + sanString);
+            try
+            {
+                ParseAndApplyMove(sanString, Player.White, out Piece captured);
+            }
+            catch (PgnException e)
+            {
+                FormInvoke(new Action(delegate
+                {
+                    MessageBox.Show("白方 AI 的输出 [" + sanString + "] 存在错误：" + Environment.NewLine + e.Message + Environment.NewLine + "将请求重新走子。", "白方出错", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                }));
+                Trace.TraceError("白方 AI 的输出 [" + sanString + "] 存在错误：" + Environment.NewLine + e.Message.Replace(@"\", @"\\") + Environment.NewLine + "将请求重新走子。");
+                error = true;
+            }
+
             NotifyPropertyChanged("WhiteStopwatchTime");
             if (ProcedureStatus == ChessBoardGameProcedureState.NotStarted) //Killed
                 return;
+
+            if (error)
+            {
+                WhiteIO.WriteLine(".");
+                ProcessAllowOutputAndWait(StdIOType.White);
+                Trace.TraceWarning(@"向白 AI 发送：\b 重走\b0 ");
+                mre.Set();
+                try
+                {
+                    _allThreadsDoneLocks.Remove(mre);
+                }
+                catch(Exception e)
+                {
+                    Trace.TraceError("向 _allThreadsDoneLocks 移除锁错误：" + e.Message + Environment.NewLine + e.StackTrace);
+                }
+            }
+
             WhiteStatus = StdIOState.NotRequesting;
             mre.Set();
-            _allThreadsDoneLocks.Remove(mre);
+            try { _allThreadsDoneLocks.Remove(mre); }
+            catch (Exception e)
+            {
+                Trace.TraceError("向 _allThreadsDoneLocks 移除锁错误：" + e.Message + Environment.NewLine + e.StackTrace);
+            }
+
         }
 
         private void _blackLineProcess(string sanString)
         {
+            bool error = false;
+
             _updateWatchLoopLock.Set();
             if (ProcedureStatus != ChessBoardGameProcedureState.Running)
                 return;
             var mre = new ManualResetEvent(false);
             _allThreadsDoneLocks.Add(mre);
-            ParseAndApplyMove(sanString, Player.Black, out Piece captured);
+            Trace.TraceInformation("黑 AI 已输出：" + sanString);
+            try
+            {
+                ParseAndApplyMove(sanString, Player.Black, out Piece captured);
+            }
+            catch (PgnException e)
+            {
+                FormInvoke(new Action(delegate
+                {
+                    MessageBox.Show("黑方 AI 的输出 [" + sanString + "] 存在错误：" + Environment.NewLine + e.Message + Environment.NewLine + "将请求重新走子。", "黑方出错", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                }));
+                Trace.TraceError("黑方 AI 的输出 [" + sanString + "] 存在错误：" + Environment.NewLine + e.Message.Replace(@"\", @"\\") + Environment.NewLine + "将请求重新走子。");
+                error = true;
+            }
             NotifyPropertyChanged("BlackStopwatchTime");
             if (ProcedureStatus == ChessBoardGameProcedureState.NotStarted) //Killed
                 return;
+            if (error)
+            {
+                BlackIO.WriteLine(".");
+                ProcessAllowOutputAndWait(StdIOType.Black);
+                Trace.TraceWarning(@"向黑 AI 发送：\b 重走\b0 ");
+                mre.Set();
+                try { _allThreadsDoneLocks.Remove(mre); }
+                catch (Exception e)
+                {
+                    Trace.TraceError("向 _allThreadsDoneLocks 移除锁错误：" + e.Message + Environment.NewLine + e.StackTrace);
+                }
+            }
             BlackStatus = StdIOState.NotRequesting;
             mre.Set();
-            _allThreadsDoneLocks.Remove(mre);
+            try { _allThreadsDoneLocks.Remove(mre); }
+            catch (Exception e)
+            {
+                Trace.TraceError("向 _allThreadsDoneLocks 移除锁错误：" + e.Message + Environment.NewLine + e.StackTrace);
+            }
+        }
+
+        private void _whiteProcessExited()
+        {
+            if(ProcedureStatus == ChessBoardGameProcedureState.Running && (Mode == GameMode.WhiteAuto || Mode == GameMode.BothAuto))
+            {
+                FormInvoke(new Action(() => System.Windows.Forms.MessageBox.Show("白方 AI 程序由于未知原因退出，游戏终止。", "游戏终止", MessageBoxButtons.OK, MessageBoxIcon.Stop)));
+                Stop();
+            }
+            WhiteStatus = StdIOState.NotStarted;
+        }
+
+        private void _blackProcessExited()
+        {
+            if (ProcedureStatus == ChessBoardGameProcedureState.Running && (Mode == GameMode.BlackAuto || Mode == GameMode.BothAuto))
+            {
+                FormInvoke(new Action(() => System.Windows.Forms.MessageBox.Show("黑方 AI 程序由于未知原因退出，游戏终止。", "游戏终止", MessageBoxButtons.OK, MessageBoxIcon.Stop)));
+                Stop();
+            }
+            BlackStatus = StdIOState.NotStarted;
         }
 
         public void LoadAIExec(Player player, string execPath, string execArguments)
@@ -855,26 +1022,26 @@ namespace TheChessBoard
             {
                 if (player == Player.White)
                 {
-                    WhiteIO = new StdIOHandler(execPath, execArguments);
+                    WhiteIO = new StdIOHandler(execPath, execArguments, "白 AI");
                     WhiteStatus = StdIOState.NotStarted;
                     WhiteIO.Context = _context;
                     WhiteIO.LineProcess += _whiteLineProcess;
+                    WhiteIO.ProcessExited += _whiteProcessExited;
                 }
                 else
                 {
-                    BlackIO = new StdIOHandler(execPath, execArguments);
+                    BlackIO = new StdIOHandler(execPath, execArguments, "黑 AI");
                     BlackStatus = StdIOState.NotStarted;
                     BlackIO.Context = _context;
                     BlackIO.LineProcess += _blackLineProcess;
+                    BlackIO.ProcessExited += _blackProcessExited;
                 }
+                foreach (var x in new List<TraceListener>(Trace.Listeners.Cast<TraceListener>()).Where((x) => x is ChessBoardTraceListener))
+                    ((ChessBoardTraceListener)(x)).TraceSuccess(execPath.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " " + execArguments + " 成功载入到" + (player == Player.White ? "白方" : "黑方"));
             }
             catch (Win32Exception)
             {
-                Trace.TraceError(execPath.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " " + execArguments + " 无法找到！");
-            }
-            finally
-            {
-                Trace.TraceInformation(execPath.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " " + execArguments + " 成功载入到" + (player == Player.White ? "白方" : "黑方"));
+                Trace.TraceError("错误：" + execPath.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " " + execArguments + " 不是合法的可执行文件！");
             }
         }
 
@@ -890,14 +1057,20 @@ namespace TheChessBoard
         public void ProcessWhiteStart()
         {
             WhiteIO.Start();
-            WhiteIO.Write("white");
+            Trace.TraceInformation("白 AI 启动。");
+            WhiteIO.WriteLine("white");
+            Trace.TraceInformation(@"向白 AI 写入：\b white\b0");
+
             WhiteStatus = StdIOState.NotRequesting;
         }
 
         public void ProcessBlackStart()
         {
             BlackIO.Start();
-            BlackIO.Write("black");
+            Trace.TraceInformation("黑 AI 启动。");
+            BlackIO.WriteLine("black");
+            Trace.TraceInformation(@"向黑 AI 写入：\b black\b0");
+
             BlackStatus = StdIOState.NotRequesting;
         }
 

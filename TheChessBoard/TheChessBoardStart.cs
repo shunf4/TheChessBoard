@@ -18,6 +18,7 @@ namespace TheChessBoard
         public Tuple<int, int ,int> ColorError = new Tuple<int, int, int>(255,0,0);
         public Tuple<int, int ,int> ColorWarning = new Tuple<int, int, int>(128,128,0);
         public Tuple<int, int ,int> ColorInformation = new Tuple<int, int, int>(0, 0, 128);
+        public Tuple<int, int ,int> ColorSuccess = new Tuple<int, int, int>(0, 128, 0);
         public Tuple<int, int ,int> ColorUsual = new Tuple<int, int, int>(0, 0, 0);
         public ChessBoardTraceListener(WriteToLogHandler _logFunc)
         {
@@ -26,13 +27,13 @@ namespace TheChessBoard
 
         public override void Write(string sth)
         {
-            string tgtStr = String.Format(@"{{\rtf1\ansicpg936 {0}}}", sth);
+            string tgtStr = String.Format(@"{{\rtf1\ansicpg936 {0}}}", sth.Replace(Environment.NewLine, @"\line "));
             LogFunc(tgtStr);
         }
 
         public override void WriteLine(string sth)
         {
-            string tgtStr = String.Format(@"{{\rtf1\ansicpg936 {0}\line}}", sth);
+            string tgtStr = String.Format(@"{{\rtf1\ansicpg936 {0}\line}}", sth.Replace(Environment.NewLine, @"\line "));
             LogFunc(tgtStr);
         }
 
@@ -40,7 +41,9 @@ namespace TheChessBoard
         {
             string colorFormat = @"{{\rtf1\ansicpg936{{\colortbl;\red{0}\green{1}\blue{2};}}";
             string colorStr;
+#pragma warning disable CS0219 // 变量已被赋值，但从未使用过它的值
             string eventTypeStr;
+#pragma warning restore CS0219 // 变量已被赋值，但从未使用过它的值
             Tuple<int, int, int> colorType;
             switch (eventType)
             {
@@ -66,15 +69,28 @@ namespace TheChessBoard
                     break;
             }
             colorStr = string.Format(colorFormat, colorType.Item1, colorType.Item2, colorType.Item3);
-            string body = colorStr + DateTime.Now.ToString("HH:mm:ss - ") + @"\cf1 " + eventTypeStr + message + @"\cf0\line}}";
+            string body = colorStr + DateTime.Now.ToString("HH:mm:ss - ") + @"\cf1 " + message.Replace(Environment.NewLine, @"\line ") + @"\cf0\line}}";
+            LogFunc(body);
+        }
+
+        public void TraceSuccess(string message)
+        {
+            string colorFormat = @"{{\rtf1\ansicpg936{{\colortbl;\red{0}\green{1}\blue{2};}}";
+            string colorStr;
+            var colorType = ColorSuccess;
+            colorStr = string.Format(colorFormat, colorType.Item1, colorType.Item2, colorType.Item3);
+            string body = colorStr + DateTime.Now.ToString("HH:mm:ss - ") + @"\cf1 " + message.Replace(Environment.NewLine, @"\line ") + @"\cf0\line}}";
             LogFunc(body);
         }
 
     }
 
+    
     static class TheChessBoardStart
     {
         static TheChessBoard boardForm;
+
+        [STAThread]
         static void Main()
         {
             //FormGame.LoadAIFilenames(@"..\..\..\TestConsoleApp1\bin\Debug\TestConsoleApp1.exe", "", "", "");

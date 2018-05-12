@@ -34,6 +34,7 @@ namespace TheChessBoard
             this.lblExecArgumentsCaption = new System.Windows.Forms.Label();
             this.btnConfirm = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
+            this.txbFileDialogExec = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // txbExecPath
@@ -41,7 +42,7 @@ namespace TheChessBoard
             this.txbExecPath.Location = new System.Drawing.Point(251, 28);
             this.txbExecPath.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.txbExecPath.Name = "txbExecPath";
-            this.txbExecPath.Size = new System.Drawing.Size(453, 27);
+            this.txbExecPath.Size = new System.Drawing.Size(539, 27);
             this.txbExecPath.TabIndex = 0;
             this.txbExecPath.Text = "..\\..\\..\\ChessArtificialRetard\\bin\\Debug\\ChessArtificialRetard.exe";
             // 
@@ -50,7 +51,7 @@ namespace TheChessBoard
             this.txbExecArguments.Location = new System.Drawing.Point(251, 81);
             this.txbExecArguments.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.txbExecArguments.Name = "txbExecArguments";
-            this.txbExecArguments.Size = new System.Drawing.Size(453, 27);
+            this.txbExecArguments.Size = new System.Drawing.Size(539, 27);
             this.txbExecArguments.TabIndex = 1;
             // 
             // lblExecPathCaption
@@ -73,7 +74,7 @@ namespace TheChessBoard
             // 
             // btnConfirm
             // 
-            this.btnConfirm.Location = new System.Drawing.Point(512, 134);
+            this.btnConfirm.Location = new System.Drawing.Point(637, 134);
             this.btnConfirm.Name = "btnConfirm";
             this.btnConfirm.Size = new System.Drawing.Size(87, 33);
             this.btnConfirm.TabIndex = 4;
@@ -84,7 +85,7 @@ namespace TheChessBoard
             // btnCancel
             // 
             this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnCancel.Location = new System.Drawing.Point(617, 134);
+            this.btnCancel.Location = new System.Drawing.Point(742, 134);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(87, 33);
             this.btnCancel.TabIndex = 5;
@@ -92,13 +93,24 @@ namespace TheChessBoard
             this.btnCancel.UseVisualStyleBackColor = true;
             this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
             // 
+            // txbFileDialogExec
+            // 
+            this.txbFileDialogExec.Location = new System.Drawing.Point(792, 28);
+            this.txbFileDialogExec.Name = "txbFileDialogExec";
+            this.txbFileDialogExec.Size = new System.Drawing.Size(37, 27);
+            this.txbFileDialogExec.TabIndex = 6;
+            this.txbFileDialogExec.Text = "...";
+            this.txbFileDialogExec.UseVisualStyleBackColor = true;
+            this.txbFileDialogExec.Click += new System.EventHandler(this.txbFileDialogExec_Click);
+            // 
             // InputExecCommandDialog
             // 
             this.AcceptButton = this.btnConfirm;
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.btnCancel;
-            this.ClientSize = new System.Drawing.Size(756, 188);
+            this.ClientSize = new System.Drawing.Size(876, 189);
+            this.Controls.Add(this.txbFileDialogExec);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnConfirm);
             this.Controls.Add(this.lblExecArgumentsCaption);
@@ -124,5 +136,6 @@ namespace TheChessBoard
         private System.Windows.Forms.Label lblExecArgumentsCaption;
         private System.Windows.Forms.Button btnConfirm;
         private System.Windows.Forms.Button btnCancel;
+        private System.Windows.Forms.Button txbFileDialogExec;
     }
 }
