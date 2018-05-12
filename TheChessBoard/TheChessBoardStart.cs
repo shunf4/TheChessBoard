@@ -99,10 +99,6 @@ namespace TheChessBoard
             if (Environment.OSVersion.Version.Major >= 6) SetProcessDPIAware();
 
             boardForm = new TheChessBoard();
-            Trace.Listeners.Clear();
-            Trace.Listeners.Add(new ChessBoardTraceListener(boardForm.AppendLog));
-            Trace.AutoFlush = true;
-            Trace.TraceInformation("日志组件开始运作");
             Application.Run(boardForm);
         }
 

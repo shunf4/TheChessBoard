@@ -17,7 +17,8 @@ using System.Windows.Forms;
 
 namespace TheChessBoard
 {
-
+    // TODO : Log的顺序
+    
     public class MoreDetailedMoveImitator
     {
         public int Index { get; set; }
@@ -679,10 +680,10 @@ namespace TheChessBoard
             }
         }
 
-        public MoveType ParseAndApplyMove(string moveInStr, Player player, out Piece captured)
+        public MoveType ParseAndApplyMove(string moveInStr, Player player, out Piece captured, bool manual = false)
         {
             Move move = PgnMoveReader.ParseMove(moveInStr, player, Game);
-            var moveResult = ApplyMove(move, false, out captured);
+            var moveResult = ApplyMove(move, false, out captured, manual);
             if (moveResult == MoveType.Invalid)
                 throw new PgnException("Move Invalid.");
             return moveResult;
@@ -714,8 +715,8 @@ namespace TheChessBoard
         public MoveType ManualMove(Move move, bool alreadyValidated, out Piece captured)
         {
             SetControlStatus(ChessBoardGameControlState.Idle, updateImportant: false);  //To clean squares
-            MoveType moveType = ApplyMove(move, alreadyValidated, out captured);
-            Trace.TraceInformation((move.Player == Player.White ? "白方" : "黑方") + "手动走子：" + Game.Moves.Last().SANString);
+            MoveType moveType = ApplyMove(move, alreadyValidated, out captured, manual: true);
+            
             if (move.Player == Player.White)
                 _hasWhiteManuallyMoved = true;
             else
@@ -726,8 +727,7 @@ namespace TheChessBoard
         public MoveType ManualMove(string moveInStr, Player player, out Piece captured)
         {
             SetControlStatus(ChessBoardGameControlState.Idle, updateImportant: false);  //To clean squares
-            MoveType moveType = ParseAndApplyMove(moveInStr, player, out captured);
-            Trace.TraceInformation((player == Player.White ? "白方" : "黑方") + " SAN 走子：" + Game.Moves.Last().SANString);
+            MoveType moveType = ParseAndApplyMove(moveInStr, player, out captured, manual: true);
             if (player == Player.White)
                 _hasWhiteManuallyMoved = true;
             else
@@ -735,7 +735,7 @@ namespace TheChessBoard
             return moveType;
         }
 
-        public MoveType ApplyMove(Move move, bool alreadyValidated, out Piece captured)
+        public MoveType ApplyMove(Move move, bool alreadyValidated, out Piece captured, bool manual = false)
         {
             var moveResult = Game.ApplyMove(move, alreadyValidated, out captured);
             var boardPrintBackup = BoardPrint;
@@ -746,7 +746,8 @@ namespace TheChessBoard
             var _updateUIDoneAfterMoveLock = new ManualResetEvent(false);
             _updateUIDoneAfterMoveLocks.Add(_updateUIDoneAfterMoveLock);
 
-
+            if(manual)
+                Trace.TraceInformation((move.Player == Player.White ? "白方" : "黑方") + "手动走子：" + Game.Moves.Last().SANString);
             NotifyPropertyChanged(new String[] { "WhoseTurn", "GameMoves" }, _updateUIDoneAfterMoveLock);
 
             if (Game.Moves.Last().StoredSANString == null)
@@ -756,23 +757,6 @@ namespace TheChessBoard
 
             if (ProcedureStatus == ChessBoardGameProcedureState.NotStarted)
                 return moveResult;
-
-            if (move.Player == Player.White)
-            {
-                if (BlackStatus == StdIOState.NotRequesting && !(HasBlackManuallyMoved))
-                {
-                    BlackIO.WriteLine(Game.Moves.Last().StoredSANString);
-                    Trace.TraceInformation("向黑 AI 发送：" + Game.Moves.Last().SANString);
-                }
-            }
-            else
-            {
-                if (WhiteStatus == StdIOState.NotRequesting && !(HasWhiteManuallyMoved))
-                {
-                    WhiteIO?.WriteLine(Game.Moves.Last().StoredSANString);
-                    Trace.TraceInformation("向白 AI 发送：" + Game.Moves.Last().SANString);
-                }
-            }
 
             SetControlStatus(ChessBoardGameControlState.Idle, true);
             if (_context != null)
@@ -791,6 +775,23 @@ namespace TheChessBoard
             }
 
             GameProcedureStatusUpdate();
+
+            if (move.Player == Player.White)
+            {
+                if (BlackStatus == StdIOState.NotRequesting && !(HasBlackManuallyMoved))
+                {
+                    Trace.TraceInformation("向黑 AI 发送：" + Game.Moves.Last().SANString);
+                    BlackIO.WriteLine(Game.Moves.Last().StoredSANString);
+                }
+            }
+            else
+            {
+                if (WhiteStatus == StdIOState.NotRequesting && !(HasWhiteManuallyMoved))
+                {
+                    Trace.TraceInformation("向白 AI 发送：" + Game.Moves.Last().SANString);
+                    WhiteIO?.WriteLine(Game.Moves.Last().StoredSANString);
+                }
+            }
 
             InvokeNextMoveRequest(ChessUtilities.GetOpponentOf(move.Player), _updateUIDoneAfterMoveLock);
             return moveResult;
@@ -1001,6 +1002,7 @@ namespace TheChessBoard
             if(ProcedureStatus == ChessBoardGameProcedureState.Running && (Mode == GameMode.WhiteAuto || Mode == GameMode.BothAuto))
             {
                 FormInvoke(new Action(() => System.Windows.Forms.MessageBox.Show("白方 AI 程序由于未知原因退出，游戏终止。", "游戏终止", MessageBoxButtons.OK, MessageBoxIcon.Stop)));
+                Trace.TraceError("白方 AI 程序由于未知原因退出，游戏终止。");
                 Stop();
             }
             WhiteStatus = StdIOState.NotStarted;
@@ -1011,6 +1013,7 @@ namespace TheChessBoard
             if (ProcedureStatus == ChessBoardGameProcedureState.Running && (Mode == GameMode.BlackAuto || Mode == GameMode.BothAuto))
             {
                 FormInvoke(new Action(() => System.Windows.Forms.MessageBox.Show("黑方 AI 程序由于未知原因退出，游戏终止。", "游戏终止", MessageBoxButtons.OK, MessageBoxIcon.Stop)));
+                Trace.TraceError("黑方 AI 程序由于未知原因退出，游戏终止。");
                 Stop();
             }
             BlackStatus = StdIOState.NotStarted;
@@ -1094,7 +1097,14 @@ namespace TheChessBoard
             }
             ProcessAllowOutputAndWait(args.StdIOType);
             mre.Set();
-            _allThreadsDoneLocks.Remove(mre);
+            try
+            {
+                _allThreadsDoneLocks.Remove(mre);
+            }
+            catch (Exception e)
+            {
+                Trace.TraceError("向 _allThreadsDoneLocks 移除锁错误：" + e.Message + Environment.NewLine + e.StackTrace);
+            }
         }
 
         public void ProcessAllowOutputAndWait(StdIOType type)

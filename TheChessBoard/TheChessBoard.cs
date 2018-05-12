@@ -173,9 +173,9 @@ namespace TheChessBoard
                 };
             }
 
+
             // Log
             SetLog(string.Format(@"{{\rtf1\ansicpg936 \b {0} {1}\b0 \line 窗体控件设置完成\line}}", FormName, FormVersion));
-
 
             // DataGridView 
 
@@ -307,6 +307,11 @@ namespace TheChessBoard
 
         private void PrimitiveBoard_Load(object sender, EventArgs e)
         {
+            Trace.Listeners.Clear();
+            Trace.Listeners.Add(new ChessBoardTraceListener(AppendLog));
+            Trace.AutoFlush = true;
+            Trace.TraceInformation("日志组件开始运作");
+
             FormGame.InvokeAllUpdates();
         }
 
@@ -318,14 +323,32 @@ namespace TheChessBoard
 
         public void AppendLog(String logRTF)
         {
-            rtbLog.Select(rtbLog.TextLength, 0);
-            rtbLog.SelectedRtf = logRTF;
+            if (this.IsHandleCreated == false)
+            {
+                rtbLog.Select(rtbLog.TextLength, 0); ;
+                rtbLog.SelectedRtf = logRTF;
+            }
+            else 
+                this.BeginInvoke(new Action(() =>
+                {
+                    rtbLog.Select(rtbLog.TextLength, 0); ;
+                    rtbLog.SelectedRtf = logRTF;
+                }));
         }
 
         public void SetLog(String logRTF)
         {
-            rtbLog.Select(0, rtbLog.TextLength);
-            rtbLog.SelectedRtf = logRTF;
+            if (this.IsHandleCreated == false)
+            {
+                rtbLog.Select(rtbLog.TextLength, 0); ;
+                rtbLog.SelectedRtf = logRTF;
+            }
+            else
+                this.BeginInvoke(new Action(() =>
+                {
+                    rtbLog.Select(0, rtbLog.TextLength);
+                    rtbLog.SelectedRtf = logRTF;
+                }));
         }
 
         private void DelimitPlayerIfNeeded()
@@ -405,7 +428,7 @@ namespace TheChessBoard
                             rdbBlack.Enabled = false;
                             rdbBlack.Checked = false;
                             rdbWhite.Enabled = true;
-                            rdbWhite.Checked = false;
+                            rdbWhite.Checked = true;
                         }
                         if (FormGame.WhoseTurn == Player.Black)
                         {
@@ -985,7 +1008,7 @@ namespace TheChessBoard
             if (FormGame.ControlStatus == ChessBoardGameControlState.Idle || FormGame.ControlStatus == ChessBoardGameControlState.NotStarted || FormGame.ControlStatus == ChessBoardGameControlState.StdIORunning || FormGame.ControlStatus == ChessBoardGameControlState.Stopped)
             {
                 // TODO : 可能需要提升效率
-                if(e.UpdateImportant == false)
+                if(e.UpdateImportant == true)
                     SquareCancelSelect();
             }
 

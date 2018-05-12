@@ -46,7 +46,7 @@ namespace ChessArtificialRetard
         static ChessGame Game;
         static Player MyPlayer;
 
-        static char[] errorChar = new char[] { '!', '"', '$', '%', '&', '\'', '(', ')', '*', ',', '-', '.', '/' };
+        static char[] errorChar = new char[] { '"', '$', '%', '&', '\'', '(', ')', '*', ',', '-', '.', '/' };
         static bool MyTurn()
         {
             ReadOnlyCollection<MoreDetailedMove> validMoves = Game.GetValidMoves(MyPlayer);
@@ -58,13 +58,13 @@ namespace ChessArtificialRetard
             }
             else
             {
-                //System.Threading.Thread.Sleep(1000);
+                System.Threading.Thread.Sleep(1000);
                 var random = new Random();
                 var k = random.Next(0, validMoves.Count);
                 var move = validMoves[k];
                 var x = random.Next(0, 100);
                 string targetString = move.GenerateSANString(Game);
-                if (x > 94)
+                if (x > 100)
                 {
                     Trace.WriteLine("Retard Breaks.");
                     targetString = targetString.Insert(random.Next(0, targetString.Length), (errorChar[random.Next(0, errorChar.Length)]).ToString());
@@ -72,7 +72,7 @@ namespace ChessArtificialRetard
                 Console.Out.WriteLine(targetString);
                 Trace.WriteLine("My Move: " + targetString);
 
-                if (x > 94)
+                if (x > 100)
                 {
                     string invalidReceive = Console.In.ReadLine();
                     if (invalidReceive != ".")
