@@ -17,8 +17,6 @@ using System.Windows.Forms;
 
 namespace TheChessBoard
 {
-    // TODO : Log的顺序
-    
     public class MoreDetailedMoveImitator
     {
         public int Index { get; set; }
@@ -170,7 +168,12 @@ namespace TheChessBoard
             if(_updateUIDoneAfterMoveLocks != null)
                 foreach (var uiLock in _updateUIDoneAfterMoveLocks)
                     uiLock.Set();
+            if (_waitWatchChessLocks != null)
+                foreach (var waitLock in _waitWatchChessLocks)
+                waitLock.Set();
+
             _updateUIDoneAfterMoveLocks = new List<ManualResetEvent>();
+            _waitWatchChessLocks = new List<ManualResetEvent>();
             _allThreadsDoneLocks = new List<ManualResetEvent>();
             _updateWatchLoopLock.Reset();
 
@@ -195,7 +198,9 @@ namespace TheChessBoard
             SetProcedureStatus(ChessBoardGameProcedureState.Running, true);
             Mode = mode;
             InvokeAllUpdates();
-            Trace.TraceInformation("游戏开始，模式：" + Mode.ToString());
+
+            foreach (var x in new List<TraceListener>(Trace.Listeners.Cast<TraceListener>()).Where((x) => x is ChessBoardTraceListener))
+                ((ChessBoardTraceListener)(x)).TraceSuccess("游戏开始，模式：" + Mode.ToString());
             InvokeNextMoveRequest(WhoseTurn, null);
         }
 
@@ -276,6 +281,7 @@ namespace TheChessBoard
         ManualResetEvent _updateWatchLoopLock = new ManualResetEvent(false);
         List<ManualResetEvent> _updateUIDoneAfterMoveLocks;
         List<ManualResetEvent> _allThreadsDoneLocks;
+        List<ManualResetEvent> _waitWatchChessLocks;
 
         public event GameProcedureStatusUpdatedEventHandler GameProcedureStatusUpdated;
         public event GameControlStatusUpdatedEventHandler GameControlStatusUpdated;
@@ -343,6 +349,9 @@ namespace TheChessBoard
             _procedureStatus = ChessBoardGameProcedureState.NotStarted;
             foreach (var uiLock in _updateUIDoneAfterMoveLocks)
                 uiLock.Set();
+            foreach (var waitLock in _waitWatchChessLocks)
+                waitLock.Set();
+            
             _updateWatchLoopLock.Set();
 
             Thread.Sleep(200);
@@ -373,6 +382,8 @@ namespace TheChessBoard
             _procedureStatus = ChessBoardGameProcedureState.Stopped;
             foreach (var uiLock in _updateUIDoneAfterMoveLocks)
                 uiLock.Set();
+            foreach (var waitLock in _waitWatchChessLocks)
+                waitLock.Set();
             _updateWatchLoopLock.Set();
 
             Thread.Sleep(200);
@@ -404,8 +415,8 @@ namespace TheChessBoard
         public ChessGame Game;
 
 #region 和两个AI进程有关的成员对象
-        public StdIOHandler WhiteIO;
-        public StdIOHandler BlackIO;
+        public AIProcess WhiteIO;
+        public AIProcess BlackIO;
 
         public string WhiteStopwatchTime
         {
@@ -1025,7 +1036,7 @@ namespace TheChessBoard
             {
                 if (player == Player.White)
                 {
-                    WhiteIO = new StdIOHandler(execPath, execArguments, "白 AI");
+                    WhiteIO = new AIProcess(execPath, execArguments, "白 AI", Properties.Settings.Default.HideAIWindow);
                     WhiteStatus = StdIOState.NotStarted;
                     WhiteIO.Context = _context;
                     WhiteIO.LineProcess += _whiteLineProcess;
@@ -1033,18 +1044,18 @@ namespace TheChessBoard
                 }
                 else
                 {
-                    BlackIO = new StdIOHandler(execPath, execArguments, "黑 AI");
+                    BlackIO = new AIProcess(execPath, execArguments, "黑 AI", Properties.Settings.Default.HideAIWindow);
                     BlackStatus = StdIOState.NotStarted;
                     BlackIO.Context = _context;
                     BlackIO.LineProcess += _blackLineProcess;
                     BlackIO.ProcessExited += _blackProcessExited;
                 }
                 foreach (var x in new List<TraceListener>(Trace.Listeners.Cast<TraceListener>()).Where((x) => x is ChessBoardTraceListener))
-                    ((ChessBoardTraceListener)(x)).TraceSuccess(execPath.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " " + execArguments + " 成功载入到" + (player == Player.White ? "白方" : "黑方"));
+                    ((ChessBoardTraceListener)(x)).TraceSuccess(execPath.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " " + execArguments.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " 成功载入到" + (player == Player.White ? "白方" : "黑方"));
             }
             catch (Win32Exception)
             {
-                Trace.TraceError("错误：" + execPath.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " " + execArguments + " 不是合法的可执行文件！");
+                Trace.TraceError("错误：" + execPath.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " " + execArguments.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " 不是合法的可执行文件！");
             }
         }
 
@@ -1095,6 +1106,15 @@ namespace TheChessBoard
                 args.UILock.WaitOne();
                 _updateUIDoneAfterMoveLocks.Remove(args.UILock);
             }
+
+            uint wt;
+            if ((wt = Properties.Settings.Default.WatchChessTime) != 0)
+            {
+                var watchChessLock = new ManualResetEvent(false);
+                _waitWatchChessLocks.Add(watchChessLock);
+                watchChessLock.WaitOne((int)wt);
+            }
+
             ProcessAllowOutputAndWait(args.StdIOType);
             mre.Set();
             try

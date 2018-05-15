@@ -57,11 +57,23 @@ namespace TheChessBoard
         {
             OpenFileDialog dialog = new OpenFileDialog();
             dialog.Filter =
-               "可执行文件 (*.exe)|*.exe|All files (*.*)|*.*";
+               "可执行文件 (*.exe)|*.exe|所有文件 (*.*)|*.*";
             dialog.Title = "选择可执行文件";
             if (dialog.ShowDialog() == DialogResult.OK)
             {
                 txbExecPath.Text = dialog.FileName;
+            }
+        }
+
+        private void txbFileDialogExecArg_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog dialog = new OpenFileDialog();
+            dialog.Filter =
+               "所有文件 (*.*)|*.*";
+            dialog.Title = "选择一个文件";
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                txbExecArguments.SelectedText = '"' + dialog.FileName + '"';
             }
         }
     }

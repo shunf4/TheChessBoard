@@ -7,6 +7,9 @@ using System.Text;
 
 namespace ChessDotNet
 {
+    /// <summary>
+    /// 本库的最重要类：ChessGame。它完整地存储了一盘游戏的所有信息，包括棋盘、何方行动、迄今移动半步数、从上一次走兵/吃子算起的移动半步数，等等；此外，它还提供了一系列方法函数。
+    /// </summary>
     public class ChessGame
     {
         bool _drawn = false;
@@ -53,6 +56,9 @@ namespace ChessDotNet
             }
         }
 
+        /// <summary>
+        /// 这些都是游戏的初始设定，即各车在王车易位前都应该处于什么列（File）。
+        /// </summary>
         public File InitialWhiteRookFileKingsideCastling { get; protected set; }
         public File InitialWhiteRookFileQueensideCastling { get; protected set; }
         public File InitialBlackRookFileKingsideCastling { get; protected set; }
@@ -60,6 +66,9 @@ namespace ChessDotNet
         public File InitialWhiteKingFile { get; protected set; }
         public File InitialBlackKingFile { get; protected set; }
 
+        /// <summary>
+        /// 将字符映射到对应的棋子的静态字典（Dictionary）。
+        /// </summary>
         public static Dictionary<char, Piece> OriginalFenMappings = new Dictionary<char, Piece>()
         {
             { 'K', new King(Player.White) },
@@ -76,6 +85,9 @@ namespace ChessDotNet
             { 'p', new Pawn(Player.Black) },
         };
 
+        /// <summary>
+        /// 同上。
+        /// </summary>
         protected virtual Dictionary<char, Piece> FenMappings
         {
             get
@@ -84,6 +96,12 @@ namespace ChessDotNet
             }
         }
 
+        /// <summary>
+        /// 将 SAN 中的字母对应到棋子。
+        /// </summary>
+        /// <param name="c">SAN 字母。</param>
+        /// <param name="owner">由于 SAN 字母只有大写，所以还需传参表示棋子是哪方。</param>
+        /// <returns></returns>
         public virtual Piece MapPgnCharToPiece(char c, Player owner)
         {
             switch (c)
@@ -109,6 +127,12 @@ namespace ChessDotNet
             }
         }
 
+        /// <summary>
+        /// 同上。
+        /// </summary>
+        /// <param name="c"></param>
+        /// <param name="owner"></param>
+        /// <returns></returns>
         public static Piece OriginalMapPgnCharToPiece(char c, Player owner)
         {
             switch (c)
@@ -137,11 +161,21 @@ namespace ChessDotNet
         public virtual bool NeedsPgnMoveSpecialTreatment(string move, Player player) { return false; }
         public virtual bool HandleSpecialPgnMove(string move, Player player) { return false;  } 
 
+        /// <summary>
+        /// 五十步和棋状态。
+        /// 如果是 true，即距离上次动兵/吃子有了50步。
+        /// </summary>
         protected bool fiftyMoves = false;
         public virtual bool FiftyMovesAndThisCanResultInDraw { get { return fiftyMoves; } }
 
+        /// <summary>
+        /// 本盘游戏中，是否强制必须轮流走棋。一般为 true，为 false 的情况仅作调试用。
+        /// </summary>
         public bool careWhoseTurnItIs = true;
 
+        /// <summary>
+        /// 返回现在是否和棋。不能将军/僵局，而且有五十步。
+        /// </summary>
         public virtual bool DrawCanBeClaimed
         {
             get
@@ -150,12 +184,18 @@ namespace ChessDotNet
             }
         }
 
+        /// <summary>
+        /// 字面意思。
+        /// </summary>
         public Player WhoseTurn
         {
             get;
             protected set;
         }
 
+        /// <summary>
+        /// 半步（一方走一下称半步）数。
+        /// </summary>
         protected int i_halfMoveClock = 0;
         public int HalfMoveClock
         {
@@ -165,6 +205,9 @@ namespace ChessDotNet
             }
         }
 
+        /// <summary>
+        /// 步（两方轮流下一次子算一步）数。
+        /// </summary>
         protected int i_fullMoveNumber = 1;
         public int FullMoveNumber
         {
@@ -174,6 +217,10 @@ namespace ChessDotNet
             }
         }
 
+        /// <summary>
+        /// 返回棋盘上所有棋子的集合。
+        /// 由于 this.Board 本质上是 Piece 的数组的数组（Piece [][]），所以在计算的时候就对 Board 用了一个 Where 方法，返回棋子的集合。
+        /// </summary>
         public ReadOnlyCollection<Piece> PiecesOnBoard
         {
             get
@@ -198,12 +245,18 @@ namespace ChessDotNet
             }
         }
 
+        /// <summary>
+        /// 游戏内棋盘。Board 本质上是 Piece 的数组的数组。
+        /// </summary>
         protected Piece[][] Board;
         public Piece[][] GetBoard()
         {
             return CloneBoard(Board);
         }
 
+        /// <summary>
+        /// 本游戏记录的历史移动。历史移动统一用 MoreDetailedMove 以记载更多信息。
+        /// </summary>
         List<MoreDetailedMove> _moves = new List<MoreDetailedMove>();
         public ReadOnlyCollection<MoreDetailedMove> Moves
         {
@@ -217,6 +270,9 @@ namespace ChessDotNet
             }
         }
 
+        /// <summary>
+        /// 黑棋现在能够进行王翼（短）易位吗？
+        /// </summary>
         public bool CanBlackCastleKingSide
         {
             get;
@@ -241,6 +297,9 @@ namespace ChessDotNet
             protected set;
         }
 
+        /// <summary>
+        /// 现在可以王车易位吗？
+        /// </summary>
         protected virtual bool CastlingCanBeLegal
         {
             get
@@ -249,6 +308,11 @@ namespace ChessDotNet
             }
         }
 
+        /// <summary>
+        /// 复制一个原有的 Board，返回。（由于 C# 的传值（如果不是最原始的那些数据类型）本质上是传引用，所以如果直接把 this.Board 传出去会遭到修改）
+        /// </summary>
+        /// <param name="originalBoard"></param>
+        /// <returns></returns>
         protected static Piece[][] CloneBoard(Piece[][] originalBoard)
         {
             ChessUtilities.ThrowIfNull(originalBoard, "originalBoard");
@@ -261,6 +325,9 @@ namespace ChessDotNet
             return newBoard;
         }
 
+        /// <summary>
+        /// ChessGame 的构造函数。初始化一些内部成员，生成最开始的棋盘。
+        /// </summary>
         public ChessGame()
         {
             WhoseTurn = Player.White;
@@ -296,6 +363,11 @@ namespace ChessDotNet
             InitialBlackKingFile = InitialWhiteKingFile = File.E;
         }
 
+        /// <summary>
+        /// ChessGame 的构造函数，原始构造后，接受一串 Move（IEnumerable 是通用的枚举类型），应用到初始局面上。
+        /// </summary>
+        /// <param name="moves"></param>
+        /// <param name="movesAreValidated"></param>
         public ChessGame(IEnumerable<Move> moves, bool movesAreValidated) : this()
         {
             if (moves == null)
@@ -311,17 +383,29 @@ namespace ChessDotNet
             }
         }
 
+        /// <summary>
+        /// 从 FEN 创建游戏。
+        /// </summary>
+        /// <param name="fen"></param>
         public ChessGame(string fen)
         {
             GameCreationData data = FenStringToGameCreationData(fen);
             UseGameCreationData(data);
         }
 
+        /// <summary>
+        /// 从创建游戏数据（GameCreationData）创建一个游戏。
+        /// </summary>
+        /// <param name="data"></param>
         public ChessGame(GameCreationData data)
         {
             UseGameCreationData(data);
         }
 
+        /// <summary>
+        /// 构造函数，全盘复制一个 ChessGame。
+        /// </summary>
+        /// <param name="game"></param>
         public ChessGame(ChessGame game)
         {
             GameCreationData gcd = new GameCreationData();
@@ -378,6 +462,10 @@ namespace ChessDotNet
             }
         }
 
+        /// <summary>
+        /// 被某个接受 GameCreationData 的构造函数调用的，载入这个 GameCreationData 的方法。
+        /// </summary>
+        /// <param name="data">这个 GameCreationData。</param>
         protected virtual void UseGameCreationData(GameCreationData data)
         {
             Board = CloneBoard(data.Board);
@@ -387,6 +475,7 @@ namespace ChessDotNet
             Piece[] eighthRank = Board[0];
             Piece[] firstRank = Board[7];
 
+            // 可易位性必须要复制
             CanBlackCastleKingSide = CanBlackCastleQueenSide = CanWhiteCastleKingSide = CanWhiteCastleQueenSide = CastlingCanBeLegal;
             InitialWhiteKingFile = (File)Array.IndexOf(firstRank, new King(Player.White));
             InitialBlackKingFile = (File)Array.IndexOf(eighthRank, new King(Player.Black));
@@ -407,14 +496,16 @@ namespace ChessDotNet
             if (InitialWhiteRookFileKingsideCastling == File.None) CanWhiteCastleKingSide = false;
             if (InitialWhiteRookFileQueensideCastling == File.None) CanWhiteCastleQueenSide = false;
 
+            // 此段代码存疑。
             if (!data.Moves.Any() && data.EnPassant != null)
             {
-                Move primMove = new Move(new Position(data.EnPassant.File, data.WhoseTurn == Player.White ? 7 : 2),
+                /*Move primMove = new Move(new Position(data.EnPassant.File, data.WhoseTurn == Player.White ? 7 : 2),
                         new Position(data.EnPassant.File, data.WhoseTurn == Player.White ? 5 : 4),
                         ChessUtilities.GetOpponentOf(data.WhoseTurn));
                 bool causeCheck = false; // magic
                 bool causeCheckmate = false; // magic
 
+                
                 MoreDetailedMove latestMove = new MoreDetailedMove(primMove,
                     new Pawn(ChessUtilities.GetOpponentOf(data.WhoseTurn)),
                     false,
@@ -425,6 +516,7 @@ namespace ChessDotNet
                     causeCheckmate
                     );
                 _moves.Add(latestMove);
+                */
             }
             else
             {
@@ -439,6 +531,10 @@ namespace ChessDotNet
             _resigned = data.Resigned;
         }
 
+        /// <summary>
+        /// 获取当前局面的 FEN 字符串。
+        /// </summary>
+        /// <returns></returns>
         public virtual string GetFen()
         {
             StringBuilder fenBuilder = new StringBuilder();
@@ -539,6 +635,11 @@ namespace ChessDotNet
 
         protected virtual int[] ValidFenBoardRows { get { return new int[1] { 8 }; } }
 
+        /// <summary>
+        /// 解析 FEN，并返回对应的 GameCreationData。
+        /// </summary>
+        /// <param name="fen"></param>
+        /// <returns></returns>
         protected virtual GameCreationData FenStringToGameCreationData(string fen)
         {
             Dictionary<char, Piece> fenMappings = FenMappings;
@@ -612,6 +713,12 @@ namespace ChessDotNet
             return data;
         }
 
+
+        /// <summary>
+        /// 将 FEN 中的 Board 部分解析为 Piece[][] 方便导入 this.Board。
+        /// </summary>
+        /// <param name="board"></param>
+        /// <returns></returns>
         protected virtual Piece[][] InterpretBoardOfFen(string board)
         {
             Piece[][] pieceArr = new Piece[8][];
@@ -654,34 +761,69 @@ namespace ChessDotNet
             return pieceArr;
         }
 
+        /// <summary>
+        /// 获取某个 Position 对应的棋子。
+        /// </summary>
+        /// <param name="position"></param>
+        /// <returns></returns>
         public Piece GetPieceAt(Position position)
         {
             ChessUtilities.ThrowIfNull(position, "position");
             return GetPieceAt(position.File, position.Rank);
         }
 
+        /// <summary>
+        /// 获取某行（Rank）某列（File）对应的棋子。
+        /// </summary>
+        /// <param name="file"></param>
+        /// <param name="rank"></param>
+        /// <returns></returns>
         public Piece GetPieceAt(File file, int rank)
         {
             return Board[8 - rank][(int)file];
         }
 
+        /// <summary>
+        /// 在某行某列设置一个棋子。（如果要移除一个棋子，就把 piece 设为 null）
+        /// </summary>
+        /// <param name="file"></param>
+        /// <param name="rank"></param>
+        /// <param name="piece"></param>
         public virtual void SetPieceAt(File file, int rank, Piece piece)
         {
             Board[8 - rank][(int)file] = piece;
         }
 
+        /// <summary>
+        /// 重要方法：判断某个 Move 在该游戏中是不是合法的 Move。（符合游戏规则，不能送吃）（传递到有参最多的那个方法。）
+        /// </summary>
+        /// <param name="move">该 Move。</param>
+        /// <returns></returns>
         public bool IsValidMove(Move move)
         {
             ChessUtilities.ThrowIfNull(move, "move");
             return IsValidMove(move, true, careWhoseTurnItIs);
         }
 
+        /// <summary>
+        /// 同上。
+        /// </summary>
+        /// <param name="move">该 Move。</param>
+        /// <param name="validateCheck">如果为 true（默认），就会检测是否王送吃。</param>
+        /// <returns></returns>
         public bool IsValidMove(Move move, bool validateCheck)
         {
             ChessUtilities.ThrowIfNull(move, "move");
             return IsValidMove(move, validateCheck, careWhoseTurnItIs);
         }
 
+        /// <summary>
+        /// 同上。
+        /// </summary>
+        /// <param name="move"></param>
+        /// <param name="validateCheck"></param>
+        /// <param name="careAboutWhoseTurnItIs">如果为 true，就不在意当前是谁执子。否则，若这个 Move 是对方做出的，则判为不合法。</param>
+        /// <returns></returns>
         public virtual bool IsValidMove(Move move, bool validateCheck, bool careAboutWhoseTurnItIs)
         {
             ChessUtilities.ThrowIfNull(move, "move");
@@ -717,6 +859,11 @@ namespace ChessDotNet
             return true;
         }
 
+        /// <summary>
+        /// 已知 Move 是一个易位 Move，对游戏应用这个 Move。
+        /// </summary>
+        /// <param name="move"></param>
+        /// <returns></returns>
         protected virtual CastlingType ApplyCastle(Move move)
         {
             CastlingType castle;
@@ -766,12 +913,26 @@ namespace ChessDotNet
             return castle;
         }
 
+        /// <summary>
+        /// 重要函数。对游戏应用某个 Move。传递到参数最多的 ApplyMove 上。
+        /// </summary>
+        /// <param name="move">该 Move。</param>
+        /// <param name="alreadyValidated">该 Move 是否已经验证过是合法的，就无需再验证。</param>
+        /// <returns></returns>
         public virtual MoveType ApplyMove(Move move, bool alreadyValidated)
         {
             Piece captured;
             return ApplyMove(move, alreadyValidated, out captured);
         }
 
+        /// <summary>
+        /// 同上。
+        /// </summary>
+        /// <param name="move">该 Move。</param>
+        /// <param name="alreadyValidated">该 Move 是否已经验证过是合法的，就无需再验证。</param>
+        /// <param name="captured">是一个传出（out）参数。如果该 Move 吃子，将所吃子送到 captured 上。</param>
+        /// <param name="probing">无关紧要。如果为 true，则在最后省略判断重新生成的 MoreDetailedMove 和传入的 MoreDetailedMove 内容是否一致。</param>
+        /// <returns></returns>
         public virtual MoveType ApplyMove(Move move, bool alreadyValidated, out Piece captured, bool probing = false)
         {
             ChessGame copy = null;
@@ -900,11 +1061,20 @@ namespace ChessDotNet
             return type;
         }
 
+        /// <summary>
+        /// 将某个 MoreDetailedMove 加入到游戏的历史走子中。
+        /// </summary>
+        /// <param name="dm"></param>
         protected virtual void AddMoreDetailedMove(MoreDetailedMove dm)
         {
             _moves.Add(dm);
         }
 
+        /// <summary>
+        /// 重要函数。返回所有从 Position from 开始的合法走子。传递到最多参的 GetValidMoves 运行。
+        /// </summary>
+        /// <param name="from"></param>
+        /// <returns></returns>
         public ReadOnlyCollection<MoreDetailedMove> GetValidMoves(Position from)
         {
             ChessUtilities.ThrowIfNull(from, "from");
@@ -916,6 +1086,13 @@ namespace ChessDotNet
             return GetValidMoves(from, returnIfAny, careWhoseTurnItIs);
         }
 
+        /// <summary>
+        /// 重要函数。返回所有从 Position from 开始的合法走子，返回 MoreDetailedMove 的只读集合。传递到最多参的 GetValidMoves 运行。
+        /// </summary>
+        /// <param name="from">合法走子的出发点。</param>
+        /// <param name="returnIfAny">如果找到一个，立即返回，不找其他的。</param>
+        /// <param name="careAboutWhoseTurnItIs">是否限定哪方执子。</param>
+        /// <returns></returns>
         public virtual ReadOnlyCollection<MoreDetailedMove> GetValidMoves(Position from, bool returnIfAny, bool careAboutWhoseTurnItIs)
         {
             ChessUtilities.ThrowIfNull(from, "from");
@@ -934,6 +1111,13 @@ namespace ChessDotNet
             return GetValidMoves(player, returnIfAny, careWhoseTurnItIs);
         }
 
+        /// <summary>
+        /// 重要函数。返回某一方 Player 的所有合法走子。遍历棋盘，调用基于 Position 的 GetValidMoves 来实现。
+        /// </summary>
+        /// <param name="player"></param>
+        /// <param name="returnIfAny"></param>
+        /// <param name="careAboutWhoseTurnItIs"></param>
+        /// <returns></returns>
         public virtual ReadOnlyCollection<MoreDetailedMove> GetValidMoves(Player player, bool returnIfAny, bool careAboutWhoseTurnItIs)
         {
             if (careAboutWhoseTurnItIs && player != WhoseTurn) return new ReadOnlyCollection<MoreDetailedMove>(new List<MoreDetailedMove>());
@@ -984,6 +1168,12 @@ namespace ChessDotNet
 
         protected Cache<bool> inCheckCacheWhite = new Cache<bool>(false, -1);
         protected Cache<bool> inCheckCacheBlack = new Cache<bool>(false, -1);
+        /// <summary>
+        /// 返回某方 Player 是否被将军。
+        /// </summary>
+        /// <param name="player">该 Player。</param>
+        /// <param name="useCache">是否使用缓存机制。</param>
+        /// <returns></returns>
         public virtual bool IsInCheck(Player player, bool useCache = true)
         {
             if (player == Player.None)
@@ -1058,6 +1248,12 @@ namespace ChessDotNet
 
         protected Cache<bool> checkmatedCacheWhite = new Cache<bool>(false, -1);
         protected Cache<bool> checkmatedCacheBlack = new Cache<bool>(false, -1);
+        /// <summary>
+        /// 返回某方 Player 是否被将死。
+        /// </summary>
+        /// <param name="player"></param>
+        /// <param name="useCache"></param>
+        /// <returns></returns>
         public virtual bool IsCheckmated(Player player, bool useCache = true)
         {
             Cache<bool> cache = player == Player.White ? checkmatedCacheWhite : checkmatedCacheBlack;
@@ -1074,6 +1270,11 @@ namespace ChessDotNet
 
         protected Cache<bool> stalematedCacheWhite = new Cache<bool>(false, -1);
         protected Cache<bool> stalematedCacheBlack = new Cache<bool>(false, -1);
+        /// <summary>
+        /// 返回某方 Player 是否僵局。
+        /// </summary>
+        /// <param name="player"></param>
+        /// <returns></returns>
         public virtual bool IsStalemated(Player player)
         {
             Cache<bool> cache = player == Player.White ? stalematedCacheWhite : stalematedCacheBlack;
@@ -1106,6 +1307,12 @@ namespace ChessDotNet
             return DrawClaimed || IsStalemated(Player.White) || IsStalemated(Player.Black);
         }
 
+        /// <summary>
+        /// 在做了某个 Move 之后，某个 Player 是否被将军。有 Bug，无法处理该落子后出现兵晋升的情况。
+        /// </summary>
+        /// <param name="move"></param>
+        /// <param name="player"></param>
+        /// <returns></returns>
         public virtual bool WouldBeInCheckAfter(Move move, Player player)
         {
             ChessUtilities.ThrowIfNull(move, "move");
@@ -1135,6 +1342,13 @@ namespace ChessDotNet
             return copy.IsInCheck(player);
         }
 
+        /// <summary>
+        /// 在做了某个 Move 之后，某个 Player 是否被将军，和被将死。用两个传出（out）参数来传递。可以处理该落子后出现兵晋升的情况。
+        /// </summary>
+        /// <param name="move"></param>
+        /// <param name="player"></param>
+        /// <param name="inCheck"></param>
+        /// <param name="checkmated"></param>
         public virtual void WouldBeInCheckOrCheckmatedAfter(Move move, Player player, out bool inCheck, out bool checkmated)
         {
             ChessUtilities.ThrowIfNull(move, "move");

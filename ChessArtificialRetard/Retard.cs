@@ -58,7 +58,7 @@ namespace ChessArtificialRetard
             }
             else
             {
-                System.Threading.Thread.Sleep(1000);
+                //System.Threading.Thread.Sleep(1000);
                 var random = new Random();
                 var k = random.Next(0, validMoves.Count);
                 var move = validMoves[k];

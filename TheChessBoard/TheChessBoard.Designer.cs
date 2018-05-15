@@ -80,6 +80,8 @@ namespace TheChessBoard
             this.groupBox7 = new System.Windows.Forms.GroupBox();
             this.rtbLog = new System.Windows.Forms.RichTextBox();
             this.cmsAbout = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.smiSettings = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.smiAbout = new System.Windows.Forms.ToolStripMenuItem();
             this.smiQuote = new System.Windows.Forms.ToolStripMenuItem();
             this.groupBox1.SuspendLayout();
@@ -572,7 +574,7 @@ namespace TheChessBoard
             this.groupBox4.Size = new System.Drawing.Size(298, 399);
             this.groupBox4.TabIndex = 26;
             this.groupBox4.TabStop = false;
-            this.groupBox4.Text = "历史";
+            this.groupBox4.Text = "历史(拖动选择，Ctrl+C复制)";
             // 
             // groupBox7
             // 
@@ -600,11 +602,25 @@ namespace TheChessBoard
             // 
             this.cmsAbout.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.cmsAbout.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.smiSettings,
+            this.toolStripSeparator1,
             this.smiAbout,
             this.smiQuote});
             this.cmsAbout.Name = "cmsAbout";
             this.cmsAbout.RenderMode = System.Windows.Forms.ToolStripRenderMode.System;
-            this.cmsAbout.Size = new System.Drawing.Size(121, 52);
+            this.cmsAbout.Size = new System.Drawing.Size(211, 110);
+            // 
+            // smiSettings
+            // 
+            this.smiSettings.Name = "smiSettings";
+            this.smiSettings.Size = new System.Drawing.Size(210, 24);
+            this.smiSettings.Text = "选项...";
+            this.smiSettings.Click += new System.EventHandler(this.smiSettings_Click);
+            // 
+            // toolStripSeparator1
+            // 
+            this.toolStripSeparator1.Name = "toolStripSeparator1";
+            this.toolStripSeparator1.Size = new System.Drawing.Size(207, 6);
             // 
             // smiAbout
             // 
@@ -726,5 +742,7 @@ namespace TheChessBoard
         private System.Windows.Forms.ContextMenuStrip cmsAbout;
         private System.Windows.Forms.ToolStripMenuItem smiAbout;
         private System.Windows.Forms.ToolStripMenuItem smiQuote;
+        private System.Windows.Forms.ToolStripMenuItem smiSettings;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
     }
 }

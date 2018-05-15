@@ -9,6 +9,7 @@ using System.Diagnostics;
 
 namespace TheChessBoard
 {
+
     public delegate void WriteToLogHandler(String logText);
 
     class ChessBoardTraceListener : TraceListener

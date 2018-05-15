@@ -36,7 +36,7 @@ namespace TheChessBoard
             // btnConfirm
             // 
             this.btnConfirm.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnConfirm.Location = new System.Drawing.Point(329, 222);
+            this.btnConfirm.Location = new System.Drawing.Point(175, 316);
             this.btnConfirm.Name = "btnConfirm";
             this.btnConfirm.Size = new System.Drawing.Size(84, 30);
             this.btnConfirm.TabIndex = 0;
@@ -45,7 +45,7 @@ namespace TheChessBoard
             // 
             // ImagePictureBox
             // 
-            this.ImagePictureBox.Location = new System.Drawing.Point(28, 32);
+            this.ImagePictureBox.Location = new System.Drawing.Point(185, 22);
             this.ImagePictureBox.Name = "ImagePictureBox";
             this.ImagePictureBox.Size = new System.Drawing.Size(64, 64);
             this.ImagePictureBox.TabIndex = 1;
@@ -53,9 +53,9 @@ namespace TheChessBoard
             // 
             // label1
             // 
-            this.label1.Location = new System.Drawing.Point(115, 22);
+            this.label1.Location = new System.Drawing.Point(32, 109);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(276, 180);
+            this.label1.Size = new System.Drawing.Size(361, 180);
             this.label1.TabIndex = 2;
             this.label1.Text = "米兰达：好人，你在安排着作弄我。\r\n\r\n腓迪南：不，我的最亲爱的，即使给我整个的世界我也不愿欺弄你。\r\n\r\n米兰达：我说你作弄我；可是就算你并吞了我二十个王国，我" +
     "还是认为这是一场公正的游戏。\r\n\r\n——《暴风雨》，第五场，第一幕";
@@ -68,7 +68,7 @@ namespace TheChessBoard
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSize = true;
             this.CancelButton = this.btnConfirm;
-            this.ClientSize = new System.Drawing.Size(428, 265);
+            this.ClientSize = new System.Drawing.Size(428, 359);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.ImagePictureBox);
             this.Controls.Add(this.btnConfirm);

@@ -35,29 +35,31 @@ namespace TheChessBoard
             this.btnConfirm = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
             this.txbFileDialogExec = new System.Windows.Forms.Button();
+            this.pnlMain = new System.Windows.Forms.Panel();
+            this.txbFileDialogExecArg = new System.Windows.Forms.Button();
+            this.pnlMain.SuspendLayout();
             this.SuspendLayout();
             // 
             // txbExecPath
             // 
-            this.txbExecPath.Location = new System.Drawing.Point(251, 28);
+            this.txbExecPath.Location = new System.Drawing.Point(253, 22);
             this.txbExecPath.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.txbExecPath.Name = "txbExecPath";
-            this.txbExecPath.Size = new System.Drawing.Size(539, 27);
+            this.txbExecPath.Size = new System.Drawing.Size(501, 27);
             this.txbExecPath.TabIndex = 0;
-            this.txbExecPath.Text = "..\\..\\..\\ChessArtificialRetard\\bin\\Debug\\ChessArtificialRetard.exe";
             // 
             // txbExecArguments
             // 
-            this.txbExecArguments.Location = new System.Drawing.Point(251, 81);
+            this.txbExecArguments.Location = new System.Drawing.Point(253, 75);
             this.txbExecArguments.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.txbExecArguments.Name = "txbExecArguments";
-            this.txbExecArguments.Size = new System.Drawing.Size(539, 27);
+            this.txbExecArguments.Size = new System.Drawing.Size(501, 27);
             this.txbExecArguments.TabIndex = 1;
             // 
             // lblExecPathCaption
             // 
             this.lblExecPathCaption.AutoSize = true;
-            this.lblExecPathCaption.Location = new System.Drawing.Point(39, 32);
+            this.lblExecPathCaption.Location = new System.Drawing.Point(27, 25);
             this.lblExecPathCaption.Name = "lblExecPathCaption";
             this.lblExecPathCaption.Size = new System.Drawing.Size(174, 20);
             this.lblExecPathCaption.TabIndex = 2;
@@ -66,7 +68,7 @@ namespace TheChessBoard
             // lblExecArgumentsCaption
             // 
             this.lblExecArgumentsCaption.AutoSize = true;
-            this.lblExecArgumentsCaption.Location = new System.Drawing.Point(39, 85);
+            this.lblExecArgumentsCaption.Location = new System.Drawing.Point(27, 78);
             this.lblExecArgumentsCaption.Name = "lblExecArgumentsCaption";
             this.lblExecArgumentsCaption.Size = new System.Drawing.Size(129, 20);
             this.lblExecArgumentsCaption.TabIndex = 3;
@@ -74,7 +76,7 @@ namespace TheChessBoard
             // 
             // btnConfirm
             // 
-            this.btnConfirm.Location = new System.Drawing.Point(637, 134);
+            this.btnConfirm.Location = new System.Drawing.Point(656, 142);
             this.btnConfirm.Name = "btnConfirm";
             this.btnConfirm.Size = new System.Drawing.Size(87, 33);
             this.btnConfirm.TabIndex = 4;
@@ -85,7 +87,7 @@ namespace TheChessBoard
             // btnCancel
             // 
             this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnCancel.Location = new System.Drawing.Point(742, 134);
+            this.btnCancel.Location = new System.Drawing.Point(761, 142);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(87, 33);
             this.btnCancel.TabIndex = 5;
@@ -95,13 +97,37 @@ namespace TheChessBoard
             // 
             // txbFileDialogExec
             // 
-            this.txbFileDialogExec.Location = new System.Drawing.Point(792, 28);
+            this.txbFileDialogExec.Location = new System.Drawing.Point(776, 22);
             this.txbFileDialogExec.Name = "txbFileDialogExec";
-            this.txbFileDialogExec.Size = new System.Drawing.Size(37, 27);
+            this.txbFileDialogExec.Size = new System.Drawing.Size(72, 27);
             this.txbFileDialogExec.TabIndex = 6;
-            this.txbFileDialogExec.Text = "...";
+            this.txbFileDialogExec.Text = "浏览...";
             this.txbFileDialogExec.UseVisualStyleBackColor = true;
             this.txbFileDialogExec.Click += new System.EventHandler(this.txbFileDialogExec_Click);
+            // 
+            // pnlMain
+            // 
+            this.pnlMain.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.pnlMain.Controls.Add(this.txbFileDialogExecArg);
+            this.pnlMain.Controls.Add(this.txbFileDialogExec);
+            this.pnlMain.Controls.Add(this.txbExecPath);
+            this.pnlMain.Controls.Add(this.txbExecArguments);
+            this.pnlMain.Controls.Add(this.lblExecArgumentsCaption);
+            this.pnlMain.Controls.Add(this.lblExecPathCaption);
+            this.pnlMain.Location = new System.Drawing.Point(0, 0);
+            this.pnlMain.Name = "pnlMain";
+            this.pnlMain.Size = new System.Drawing.Size(875, 128);
+            this.pnlMain.TabIndex = 7;
+            // 
+            // txbFileDialogExecArg
+            // 
+            this.txbFileDialogExecArg.Location = new System.Drawing.Point(776, 75);
+            this.txbFileDialogExecArg.Name = "txbFileDialogExecArg";
+            this.txbFileDialogExecArg.Size = new System.Drawing.Size(72, 27);
+            this.txbFileDialogExecArg.TabIndex = 7;
+            this.txbFileDialogExecArg.Text = "插入...";
+            this.txbFileDialogExecArg.UseVisualStyleBackColor = true;
+            this.txbFileDialogExecArg.Click += new System.EventHandler(this.txbFileDialogExecArg_Click);
             // 
             // InputExecCommandDialog
             // 
@@ -110,32 +136,31 @@ namespace TheChessBoard
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.btnCancel;
             this.ClientSize = new System.Drawing.Size(876, 189);
-            this.Controls.Add(this.txbFileDialogExec);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnConfirm);
-            this.Controls.Add(this.lblExecArgumentsCaption);
-            this.Controls.Add(this.lblExecPathCaption);
-            this.Controls.Add(this.txbExecArguments);
-            this.Controls.Add(this.txbExecPath);
+            this.Controls.Add(this.pnlMain);
             this.Font = new System.Drawing.Font("微软雅黑", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "InputExecCommandDialog";
+            this.ShowIcon = false;
             this.Text = "设置红方AI";
+            this.pnlMain.ResumeLayout(false);
+            this.pnlMain.PerformLayout();
             this.ResumeLayout(false);
-            this.PerformLayout();
 
         }
 
         #endregion
-
-        private System.Windows.Forms.TextBox txbExecPath;
-        private System.Windows.Forms.TextBox txbExecArguments;
         private System.Windows.Forms.Label lblExecPathCaption;
         private System.Windows.Forms.Label lblExecArgumentsCaption;
         private System.Windows.Forms.Button btnConfirm;
         private System.Windows.Forms.Button btnCancel;
         private System.Windows.Forms.Button txbFileDialogExec;
+        public System.Windows.Forms.TextBox txbExecPath;
+        public System.Windows.Forms.TextBox txbExecArguments;
+        private System.Windows.Forms.Panel pnlMain;
+        private System.Windows.Forms.Button txbFileDialogExecArg;
     }
 }

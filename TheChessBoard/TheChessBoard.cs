@@ -340,7 +340,7 @@ namespace TheChessBoard
         {
             if (this.IsHandleCreated == false)
             {
-                rtbLog.Select(rtbLog.TextLength, 0); ;
+                rtbLog.Select(0, rtbLog.TextLength); ;
                 rtbLog.SelectedRtf = logRTF;
             }
             else
@@ -851,9 +851,17 @@ namespace TheChessBoard
         private void btnLoadWhiteAI_Click(object sender, EventArgs e)
         {
             InputExecCommandDialog inputDialog = new InputExecCommandDialog(Player.White);
+            inputDialog.txbExecPath.Text = Properties.Settings.Default.WhiteDefaultExecPath;
+            inputDialog.txbExecArguments.Text = Properties.Settings.Default.WhiteDefaultExecArguments;
             inputDialog.CallbackEvent += (player, execPath, execArguments) =>
             {
                 FormGame.LoadAIExec(player, execPath, execArguments);
+                if(Properties.Settings.Default.AutoSaveAIConfig)
+                {
+                    Properties.Settings.Default.WhiteDefaultExecPath = execPath;
+                    Properties.Settings.Default.WhiteDefaultExecArguments = execArguments;
+                    Properties.Settings.Default.Save();
+                }
             };
             inputDialog.ShowDialog();
         }
@@ -861,9 +869,17 @@ namespace TheChessBoard
         private void btnLoadBlackAI_Click(object sender, EventArgs e)
         {
             InputExecCommandDialog inputDialog = new InputExecCommandDialog(Player.Black);
+            inputDialog.txbExecPath.Text = Properties.Settings.Default.BlackDefaultExecPath;
+            inputDialog.txbExecArguments.Text = Properties.Settings.Default.BlackDefaultExecArguments;
             inputDialog.CallbackEvent += (player, execPath, execArguments) =>
             {
                 FormGame.LoadAIExec(player, execPath, execArguments);
+                if (Properties.Settings.Default.AutoSaveAIConfig)
+                {
+                    Properties.Settings.Default.BlackDefaultExecPath = execPath;
+                    Properties.Settings.Default.BlackDefaultExecArguments = execArguments;
+                    Properties.Settings.Default.Save();
+                }
             };
             inputDialog.ShowDialog();
         }
@@ -1242,6 +1258,11 @@ namespace TheChessBoard
         private void smiQuote_Click(object sender, EventArgs e)
         {
             new QuoteBox { Owner = this }.ShowDialog();
+        }
+
+        private void smiSettings_Click(object sender, EventArgs e)
+        {
+            new SettingsBox().ShowDialog();
         }
     }
 }

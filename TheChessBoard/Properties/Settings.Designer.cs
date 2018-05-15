@@ -22,5 +22,89 @@ namespace TheChessBoard.Properties {
                 return defaultInstance;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("100")]
+        public uint WatchChessTime {
+            get {
+                return ((uint)(this["WatchChessTime"]));
+            }
+            set {
+                this["WatchChessTime"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("..\\..\\..\\ChessArtificialRetard\\bin\\Debug\\ChessArtificialRetard.exe")]
+        public string WhiteDefaultExecPath {
+            get {
+                return ((string)(this["WhiteDefaultExecPath"]));
+            }
+            set {
+                this["WhiteDefaultExecPath"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string WhiteDefaultExecArguments {
+            get {
+                return ((string)(this["WhiteDefaultExecArguments"]));
+            }
+            set {
+                this["WhiteDefaultExecArguments"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("..\\..\\..\\ChessArtificialRetard\\bin\\Debug\\ChessArtificialRetard.exe")]
+        public string BlackDefaultExecPath {
+            get {
+                return ((string)(this["BlackDefaultExecPath"]));
+            }
+            set {
+                this["BlackDefaultExecPath"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string BlackDefaultExecArguments {
+            get {
+                return ((string)(this["BlackDefaultExecArguments"]));
+            }
+            set {
+                this["BlackDefaultExecArguments"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool AutoSaveAIConfig {
+            get {
+                return ((bool)(this["AutoSaveAIConfig"]));
+            }
+            set {
+                this["AutoSaveAIConfig"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool HideAIWindow {
+            get {
+                return ((bool)(this["HideAIWindow"]));
+            }
+            set {
+                this["HideAIWindow"] = value;
+            }
+        }
     }
 }

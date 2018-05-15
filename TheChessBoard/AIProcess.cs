@@ -14,7 +14,7 @@ namespace TheChessBoard
     public delegate void LineProcessorHandler(string line);
     public delegate void ProcessExitedHandler();
 
-    public class StdIOHandler : INotifyPropertyChanged
+    public class AIProcess : INotifyPropertyChanged
     {
         //INotifyPropertyChanged 大法，将属性成员的改动直接与控件属性值建立联系（控件那边用一个DataBinding）
         #region INotifyPropertyChanged 成员
@@ -58,7 +58,7 @@ namespace TheChessBoard
         public string Description
         { get; private set; }
 
-        public StdIOHandler(string ExecPath, string ExecArguments, string description = null)
+        public AIProcess(string ExecPath, string ExecArguments, string description, bool createNoWindow)
         {
             proc = new Process();
 
@@ -69,12 +69,9 @@ namespace TheChessBoard
             proc.StartInfo.UseShellExecute = false;
             proc.StartInfo.RedirectStandardInput = true;
             proc.StartInfo.RedirectStandardOutput = true;
-            proc.StartInfo.CreateNoWindow = false;
+            proc.StartInfo.CreateNoWindow = createNoWindow;
             proc.EnableRaisingEvents = true;
 
-                //TODO : 异常退出的情况
-                //TODO : 错误重走的情况
-                //TODO : 日志
             proc.Start();
             if(!proc.HasExited)
             {
