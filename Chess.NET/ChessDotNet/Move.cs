@@ -2,26 +2,41 @@ using System.Text;
 
 namespace ChessDotNet
 {
+    /// <summary>
+    /// 最基础的 Move 类，记录一个走子的基础信息。
+    /// </summary>
     public class Move
     {
+        /// <summary>
+        /// 原 Position。
+        /// </summary>
         public Position OriginalPosition
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// 新 Position。
+        /// </summary>
         public Position NewPosition
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// 做出这个 Move 的 Player。
+        /// </summary>
         public Player Player
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// 如果这个 Move 里有兵的晋升操作，则设为 true。
+        /// </summary>
         public char? Promotion
         {
             get;
@@ -38,6 +53,13 @@ namespace ChessDotNet
             : this(originalPosition, newPosition, player, null)
         { }
 
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
+        /// <param name="originalPosition"></param>
+        /// <param name="newPosition"></param>
+        /// <param name="player"></param>
+        /// <param name="promotion"></param>
         public Move(Position originalPosition, Position newPosition, Player player, char? promotion)
         {
             OriginalPosition = originalPosition;

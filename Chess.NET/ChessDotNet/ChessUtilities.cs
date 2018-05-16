@@ -1,10 +1,18 @@
-﻿using System;
+using System;
 using System.Linq;
 
 namespace ChessDotNet
 {
+    /// <summary>
+    /// 是一个静态类，里面列了一些 ChessGame 用到的功能。
+    /// </summary>
     public static class ChessUtilities
     {
+        /// <summary>
+        /// 如果 value 是空的话，就抛出一个异常。用于保证某 value 是非空。
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="parameterName"></param>
         public static void ThrowIfNull(object value, string parameterName)
         {
             if (value == null)
@@ -13,6 +21,11 @@ namespace ChessDotNet
             }
         }
 
+        /// <summary>
+        /// 获得对方 Player。
+        /// </summary>
+        /// <param name="player"></param>
+        /// <returns></returns>
         public static Player GetOpponentOf(Player player)
         {
             if (player == Player.None)
@@ -20,6 +33,14 @@ namespace ChessDotNet
             return player == Player.White ? Player.Black : Player.White;
         }
 
+        /// <summary>
+        /// 返回从列（File） file1 到列（File） file2 的所有列的数组。
+        /// </summary>
+        /// <param name="file1"></param>
+        /// <param name="file2"></param>
+        /// <param name="file1Inclusive">这个数组是否包含 file1。</param>
+        /// <param name="file2Inclusive">这个数组是否包含 file2。</param>
+        /// <returns></returns>
         public static File[] FilesBetween(File file1, File file2, bool file1Inclusive, bool file2Inclusive)
         {
             if (file1 == file2)

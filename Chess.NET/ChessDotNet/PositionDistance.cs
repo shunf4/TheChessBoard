@@ -1,7 +1,10 @@
-﻿using System;
+using System;
 
 namespace ChessDotNet
 {
+    /// <summary>
+    /// 表示两个 Position 之间的位置差，由 X 差值和 Y 差值构成。
+    /// </summary>
     public struct PositionDistance
     {
         int _distanceX;

@@ -7,8 +7,18 @@ using ChessDotNet.Pieces;
 
 namespace ChessDotNet
 {
+    /// <summary>
+    /// 静态类，提供一个函数用来将 SAN 字符串解析为一个 Move。
+    /// </summary>
     public static class PgnMoveReader
     {
+        /// <summary>
+        /// 将 SAN 字符串解析为 Move。
+        /// </summary>
+        /// <param name="moveInStr"></param>
+        /// <param name="player"></param>
+        /// <param name="game"></param>
+        /// <returns></returns>
         public static Move ParseMove(string moveInStr, Player player, ChessGame game)
         {
             try

@@ -1,8 +1,11 @@
-﻿using System;
+using System;
 using System.Globalization;
 
 namespace ChessDotNet
 {
+    /// <summary>
+    /// 表示国际象棋棋盘中的“列”。
+    /// </summary>
     public enum File
     {
         A = 0,
@@ -16,6 +19,11 @@ namespace ChessDotNet
         None = -1
     }
 
+    // 国际象棋棋盘中的“行（Rank）”直接用int型表示，从1到8。
+
+    /// <summary>
+    /// 位置。表示在国际象棋棋盘上的一个位置，由 File 和 Rank（int） 构成。
+    /// </summary>
     public class Position
     {
         File _file;

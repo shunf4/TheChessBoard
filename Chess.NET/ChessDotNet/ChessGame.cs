@@ -1391,6 +1391,10 @@ namespace ChessDotNet
             _resigned = player;
         }
 
+        /// <summary>
+        /// 根据这个 ChessGame，创建一个 GameCreationData 并返回。
+        /// </summary>
+        /// <returns></returns>
         public GameCreationData GetGameCreationData()
         {
             return new GameCreationData

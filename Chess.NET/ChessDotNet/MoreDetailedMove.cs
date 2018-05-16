@@ -1,44 +1,68 @@
 using System.Collections.Generic;
 namespace ChessDotNet
 {
+    /// <summary>
+    /// 是 Move 的派生类，现在已经全面使用，记录了最详细的这个 Move 的信息。
+    /// </summary>
     public class MoreDetailedMove : DetailedMove
     {
+        /// <summary>
+        /// 这个 MoreDetailedMove 关联到的 ChessGame（在这个 MoreDetailedMove 做出之前的状态）。因为要输出 SAN，以及文字描述必须和 ChessGame 挂钩。
+        /// </summary>
         public ChessGame AssociatedGame
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// 弃用。关联到的 ChessGame （在 Move 做出之后的状态）。
+        /// </summary>
         public ChessGame AssociatedGameAfterMove
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// 如果该走子吃子，则 CapturedPiece 是被吃子；否则为 null。
+        /// </summary>
         public Piece CapturedPiece
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// 记录这个走子是否吃过路兵。
+        /// </summary>
         public bool IsEnpassant
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// 记录这个走子是否将军。
+        /// </summary>
         public bool? IsChecking
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// 记录这个走子是否将死。
+        /// </summary>
         public bool? IsCheckmate
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// 如果之前已经计算过 SAN 字符串，则存在这里供以后取用。
+        /// </summary>
         private string _storedSANString
         {
             get;
@@ -53,6 +77,9 @@ namespace ChessDotNet
             }
         }
 
+        /// <summary>
+        /// 如果之前已经计算过文字描述，则存在这里供以后取用。
+        /// </summary>
         private string _storedFriendlyText
         {
             get;
@@ -94,6 +121,20 @@ namespace ChessDotNet
 
         protected MoreDetailedMove() { }
 
+        /// <summary>
+        /// 构造函数。
+        /// </summary>
+        /// <param name="originalPosition"></param>
+        /// <param name="newPosition"></param>
+        /// <param name="player"></param>
+        /// <param name="promotion"></param>
+        /// <param name="piece"></param>
+        /// <param name="isCapture"></param>
+        /// <param name="castling"></param>
+        /// <param name="capturedPiece"></param>
+        /// <param name="isEnpassant"></param>
+        /// <param name="isChecking"></param>
+        /// <param name="isCheckmate"></param>
         public MoreDetailedMove(Position originalPosition, Position newPosition, Player player, char? promotion, Piece piece, bool isCapture, CastlingType castling, Piece capturedPiece, bool isEnpassant, bool isChecking, bool isCheckmate) : base(originalPosition, newPosition, player, promotion, piece, isCapture, castling)
         {
             CapturedPiece = capturedPiece;
@@ -148,6 +189,9 @@ namespace ChessDotNet
             return !move1.Equals(move2);
         }
 
+        /// <summary>
+        /// 生成文字描述。
+        /// </summary>
         public void GenerateFriendlyText()
         {
             var sb = new System.Text.StringBuilder();
@@ -188,6 +232,11 @@ namespace ChessDotNet
             this._storedFriendlyText = sb.ToString();
         }
 
+        /// <summary>
+        /// 生成 SAN 字符串。
+        /// </summary>
+        /// <param name="gameBeforeTheMove"></param>
+        /// <returns></returns>
         public string GenerateSANString(ChessGame gameBeforeTheMove)
         {
             string SANResult;

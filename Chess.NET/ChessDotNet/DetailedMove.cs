@@ -1,29 +1,46 @@
 
 namespace ChessDotNet
 {
-
+    /// <summary>
+    /// Move 的派生类，额外多了一些描述这个走子（Move）的属性。现已弃用，全面使用 MoreDetailedMove。
+    /// </summary>
     public class DetailedMove : Move
     {
+        /// <summary>
+        /// 哪个 Piece 走的子。
+        /// </summary>
         public Piece Piece
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// 这个 Move 有没有吃子。
+        /// </summary>
         public bool IsCapture
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// 这个 Move 是不是易位，以及易位的类型。
+        /// </summary>
         public CastlingType Castling
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// 无参构造函数。
+        /// </summary>
         protected DetailedMove() { }
 
+        /// <summary>
+        /// 返回这个 DetailedMove 的文字描述。
+        /// </summary>
         public virtual string FriendlyText
         {
             get
