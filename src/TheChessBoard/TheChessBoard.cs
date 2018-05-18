@@ -308,7 +308,7 @@ namespace TheChessBoard
         private void PrimitiveBoard_Load(object sender, EventArgs e)
         {
             Trace.Listeners.Clear();
-            Trace.Listeners.Add(new ChessBoardTraceListener(AppendLog));
+            Trace.Listeners.Add(new RichTextBoxTraceListener(AppendLog));
             Trace.AutoFlush = true;
             Trace.TraceInformation("日志组件开始运作");
 

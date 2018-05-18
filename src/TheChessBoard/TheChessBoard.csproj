@@ -79,6 +79,7 @@
     <Compile Include="QuoteBox.Designer.cs">
       <DependentUpon>QuoteBox.cs</DependentUpon>
     </Compile>
+    <Compile Include="RichTextBoxTraceListener.cs" />
     <Compile Include="SettingsBox.cs">
       <SubType>Form</SubType>
     </Compile>

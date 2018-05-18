@@ -1,6 +1,3 @@
-// 用 Form.Invoke 的主线程调用方式，更流畅
-#define ALTERNATIVE_SAFELY_UPDATEUI
-
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -17,6 +14,9 @@ using System.Windows.Forms;
 
 namespace TheChessBoard
 {
+    /// <summary>
+    /// 是 MoreDetailedMove 的表项化，可以将一个 MoreDetailedMove 转化为只记录 Player、SAN 等字符串的表项。在“历史记录”中使用。
+    /// </summary>
     public class MoreDetailedMoveImitator
     {
         public int Index { get; set; }
@@ -68,15 +68,21 @@ namespace TheChessBoard
         SquareBlack
     }
 
+    /// <summary>
+    /// 重要的状态量：ChessBoardGame 的控件状态。
+    /// </summary>
     public enum ChessBoardGameControlState
     {
-        NotStarted,
-        Idle,
-        Selected,
-        StdIORunning,
-        Stopped
+        NotStarted,     //游戏未开始，一些按钮不能操作。
+        Idle,           //游戏空闲等待操作，可以按下一些按钮。
+        Selected,       //玩家点击了一个棋盘格，棋盘格正产生高亮的状态。
+        StdIORunning,   //AI 进程正在处理输出，一些按钮不能操作。
+        Stopped         //游戏停止，一些按钮不能操作。
     }
 
+    /// <summary>
+    /// 重要的状态量：ChessBoardGame 的游戏进行（Procedure）状态。
+    /// </summary>
     public enum ChessBoardGameProcedureState
     {
         NotStarted,
@@ -87,6 +93,9 @@ namespace TheChessBoard
         Draw
     }
 
+    /// <summary>
+    /// 重要的状态量：ChessBoardGame 的白方/黑方进程状态。
+    /// </summary>
     public enum StdIOState
     {
         NotLoaded,
@@ -101,6 +110,9 @@ namespace TheChessBoard
         Black
     }
 
+    /// <summary>
+    /// 游戏的模式：未开启，双手动，半自动，全自动。
+    /// </summary>
     public enum GameMode
     {
         NotStarted,
@@ -110,45 +122,76 @@ namespace TheChessBoard
         BothAuto
     }
 
+    /// <summary>
+    /// 上述的状态改变时可能要传一些参，因此将这些参数封装为 StatusUpdatedEventArgs。
+    /// </summary>
     public class StatusUpdatedEventArgs : EventArgs
     {
-        private bool _updateImportant;
-        private string _reason;
         public StatusUpdatedEventArgs(bool updateImportant, string reason)
         {
-            _updateImportant = updateImportant;
-            _reason = reason;
+            UpdateImportant = updateImportant;
+            Reason = reason;
         }
 
         public StatusUpdatedEventArgs(bool updateImportant)
         {
-            _updateImportant = updateImportant;
-            _reason = null;
+            UpdateImportant = updateImportant;
+            Reason = null;
         }
 
         public StatusUpdatedEventArgs()
         {
-            _updateImportant = false;
-            _reason = null;
+            UpdateImportant = false;
+            Reason = null;
         }
 
-        public string Reason { get { return _reason; } }
-        public bool UpdateImportant { get { return _updateImportant; } }
+        public string Reason { get; }
+        public bool UpdateImportant { get; }
     }
+
+    /// <summary>
+    /// 当应用一个 Move 过后，需要触发的函数。
+    /// </summary>
     public delegate void AppliedMoveEventHandler();
+    /// <summary>
+    /// 当游戏进行状态改变过后，需要触发的函数。
+    /// </summary>
+    /// <param name="e"></param>
     public delegate void GameProcedureStatusUpdatedEventHandler(StatusUpdatedEventArgs e);
+    /// <summary>
+    /// 当游戏控件状态改变过后，需要触发的函数。
+    /// </summary>
+    /// <param name="e"></param>
     public delegate void GameControlStatusUpdatedEventHandler(StatusUpdatedEventArgs e);
+    /// <summary>
+    /// 当有一方 AI 进程状态改变过后，需要触发的函数。
+    /// </summary>
+    /// <param name="e"></param>
     public delegate void PlayerIOStatusUpdatedEventHandler(StatusUpdatedEventArgs e);
+    /// <summary>
+    /// 从 TheChessBoard 传进来的 Invoke 函数，用这个 Invoke 函数来执行某些函数可以确保线程安全。
+    /// </summary>
+    /// <param name="g">用这个 Invoke 来执行的函数。</param>
+    /// <returns></returns>
     public delegate object FormInvoke(Delegate g);
 
-
+    /// <summary>
+    /// 与 TheChessBoard（前台窗体）直接相关的，但是更偏重于游戏进程的逻辑状态而不是 UI 的象棋棋局类。
+    /// </summary>
     public class ChessBoardGame : INotifyPropertyChanged
     {
         private static int _defaultWaitPeriod = 17;
 
+        /// <summary>
+        /// 无参构造，从默认的 _defaultGameCreationData 构造象棋游戏。
+        /// </summary>
         public ChessBoardGame() : this(_defaultGameCreationData)
         { }
 
+        /// <summary>
+        /// 从 gameCreationData 构造象棋游戏 Game。
+        /// </summary>
+        /// <param name="gameCreationData"></param>
         public ChessBoardGame(GameCreationData gameCreationData)
         {
             Game = new ChessGame(gameCreationData);
@@ -162,8 +205,8 @@ namespace TheChessBoard
             Trace.TraceInformation("棋盘游戏开始初始化。");
             SetControlStatus(ChessBoardGameControlState.NotStarted, true);
             SetProcedureStatus(ChessBoardGameProcedureState.NotStarted, true);
-            _hasWhiteManuallyMoved = false;
-            _hasBlackManuallyMoved = false;
+            HasWhiteManuallyMoved = false;
+            HasBlackManuallyMoved = false;
             Mode = GameMode.NotStarted;
             if(_updateUIDoneAfterMoveLocks != null)
                 foreach (var uiLock in _updateUIDoneAfterMoveLocks)
@@ -199,8 +242,8 @@ namespace TheChessBoard
             Mode = mode;
             InvokeAllUpdates();
 
-            foreach (var x in new List<TraceListener>(Trace.Listeners.Cast<TraceListener>()).Where((x) => x is ChessBoardTraceListener))
-                ((ChessBoardTraceListener)(x)).TraceSuccess("游戏开始，模式：" + Mode.ToString());
+            foreach (var x in new List<TraceListener>(Trace.Listeners.Cast<TraceListener>()).Where((x) => x is RichTextBoxTraceListener))
+                ((RichTextBoxTraceListener)(x)).TraceSuccess("游戏开始，模式：" + Mode.ToString());
             InvokeNextMoveRequest(WhoseTurn, null);
         }
 
@@ -237,35 +280,39 @@ namespace TheChessBoard
 
         #region INotifyPropertyChanged 成员
         public event PropertyChangedEventHandler PropertyChanged;
+        /// <summary>
+        /// 只触发一个属性更新。
+        /// </summary>
+        /// <param name="propertyName"></param>
         private void NotifyPropertyChanged([CallerMemberName] String propertyName = "")
         {
-            if (_context != null)
+            if (FormInvoke != null)
             {
-#if !ALTERNATIVE_SAFELY_UPDATEUI
-                _context.Post((obj) => {
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-                }, null);
-#else
                 FormInvoke(new Action(delegate { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName)); }));
-#endif
             }
             else
             {
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
             }
-            System.Windows.Forms.Application.DoEvents();
+            Application.DoEvents();
         }
 
+        /// <summary>
+        /// 触发多个属性更新
+        /// </summary>
+        /// <param name="propertyNames"></param>
+        /// <param name="uiLock"></param>
         private void NotifyPropertyChanged(String[] propertyNames, ManualResetEvent uiLock)
         {
             if (PropertyChanged == null) return;
-            if (_context != null)
+            if (FormInvoke != null)
             {
-                _context.Post((obj) => {
+                FormInvoke(new Action(delegate
+                {
                     foreach (var propertyName in propertyNames)
                         PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
                     uiLock?.Set();
-                }, null);
+                }));
             }
             else
             {
@@ -312,26 +359,15 @@ namespace TheChessBoard
             _allThreadsDoneLocks.Remove(mre);
         }
 
-        SynchronizationContext _context;
-
         public void InvokeAllUpdates(bool updateImportant = false)
         {
             var commonEventArgs = new StatusUpdatedEventArgs(updateImportant);
-            if (_context != null)
-#if !ALTERNATIVE_SAFELY_UPDATEUI
-            {
-                _context?.Post((obj) => GameProcedureStatusUpdated?.Invoke(commonEventArgs), null);
-                _context?.Post((obj) => GameControlStatusUpdated?.Invoke(commonEventArgs), null);
-                _context?.Post((obj) => PlayerIOStatusUpdated?.Invoke(commonEventArgs), null);
-
-            }
-#else
+            if (FormInvoke != null)
             {
                 FormInvoke(new Action(delegate { GameProcedureStatusUpdated?.Invoke(commonEventArgs); }));
                 FormInvoke(new Action(delegate { GameControlStatusUpdated?.Invoke(commonEventArgs); }));
                 FormInvoke(new Action(delegate { PlayerIOStatusUpdated?.Invoke(commonEventArgs); }));
             }
-#endif
             else
             {
                 GameProcedureStatusUpdated?.Invoke(commonEventArgs);
@@ -412,8 +448,6 @@ namespace TheChessBoard
 
         #endregion
 
-        public ChessGame Game;
-
 #region 和两个AI进程有关的成员对象
         public AIProcess WhiteIO;
         public AIProcess BlackIO;
@@ -475,13 +509,10 @@ namespace TheChessBoard
         private ChessBoardGameProcedureState _procedureStatus;
         private StdIOState _whiteStatus;
         private StdIOState _blackStatus;
-        private bool _hasWhiteManuallyMoved;
-        private bool _hasBlackManuallyMoved;
-
         public GameMode Mode;
 
-        public bool HasWhiteManuallyMoved { get { return _hasWhiteManuallyMoved; } }
-        public bool HasBlackManuallyMoved { get { return _hasBlackManuallyMoved; } }
+        public bool HasWhiteManuallyMoved { get; private set; }
+        public bool HasBlackManuallyMoved { get; private set; }
 
         public ChessBoardGameControlState ControlStatus
         {
@@ -490,15 +521,10 @@ namespace TheChessBoard
             {
                 _controlStatus = value;
                 //Trace.TraceInformation("当前窗体控件状态：" + value.ToString());
-                if (_context != null)
-#if !ALTERNATIVE_SAFELY_UPDATEUI
-                    _context?.Post((obj) => GameControlStatusUpdated?.Invoke(new StatusUpdatedEventArgs()), null);
-#else
+                if (FormInvoke != null)
                     FormInvoke(new Action(delegate { GameControlStatusUpdated?.Invoke(new StatusUpdatedEventArgs()); }));
-#endif
                 else
                     GameControlStatusUpdated?.Invoke(new StatusUpdatedEventArgs());
-                //System.Windows.Forms.Application.DoEvents();
             }
         }
         public ChessBoardGameProcedureState ProcedureStatus
@@ -508,15 +534,10 @@ namespace TheChessBoard
             {
                 _procedureStatus = value;
                 Trace.TraceInformation("当前游戏进程状态：" + value.ToString());
-                if (_context != null)
-#if !ALTERNATIVE_SAFELY_UPDATEUI
-                    _context?.Post((obj) => GameProcedureStatusUpdated?.Invoke(new StatusUpdatedEventArgs()), null);
-#else
+                if (FormInvoke != null)
                     FormInvoke(new Action(delegate { GameProcedureStatusUpdated?.Invoke(new StatusUpdatedEventArgs()); }));
-#endif
                 else
                     GameProcedureStatusUpdated?.Invoke(new StatusUpdatedEventArgs());
-                //System.Windows.Forms.Application.DoEvents();
             }
         }
 
@@ -528,15 +549,10 @@ namespace TheChessBoard
                 _whiteStatus = value;
                 if(value != StdIOState.NotRequesting && value != StdIOState.Requesting)
                     Trace.TraceInformation("当前白 AI 状态：" + value.ToString());
-                if (_context != null)
-#if !ALTERNATIVE_SAFELY_UPDATEUI
-                    _context?.Post((obj) => PlayerIOStatusUpdated?.Invoke(new StatusUpdatedEventArgs()), null);
-#else
+                if (FormInvoke != null)
                     FormInvoke(new Action(delegate { PlayerIOStatusUpdated?.Invoke(new StatusUpdatedEventArgs()); }));
-#endif
                 else
                     PlayerIOStatusUpdated?.Invoke(new StatusUpdatedEventArgs());
-                //System.Windows.Forms.Application.DoEvents();
             }
         }
 
@@ -548,15 +564,10 @@ namespace TheChessBoard
                 _blackStatus = value;
                 if (value != StdIOState.NotRequesting && value != StdIOState.Requesting)
                     Trace.TraceInformation("当前黑 AI 状态：" + value.ToString());
-                if (_context != null)
-#if !ALTERNATIVE_SAFELY_UPDATEUI
-                    _context?.Post((obj) => PlayerIOStatusUpdated?.Invoke(new StatusUpdatedEventArgs()), null);
-#else
+                if (FormInvoke != null)
                     FormInvoke(new Action(delegate { PlayerIOStatusUpdated?.Invoke(new StatusUpdatedEventArgs()); }));
-#endif
                 else
                     PlayerIOStatusUpdated?.Invoke(new StatusUpdatedEventArgs());
-                //System.Windows.Forms.Application.DoEvents();
             }
         }
 
@@ -564,27 +575,18 @@ namespace TheChessBoard
         {
             _procedureStatus = pState;
             Trace.TraceInformation("当前游戏进程状态：" + (updateImportant ? @"\b " : "") + pState.ToString() + (updateImportant ? @"\b0 " : "") + "，" + @"因为：" + (reason != "" && reason != null ? reason : "无"));
-            if (_context != null)
-#if !ALTERNATIVE_SAFELY_UPDATEUI
-                _context?.Post((obj) => GameProcedureStatusUpdated?.Invoke(new StatusUpdatedEventArgs(updateImportant, reason)), null);
-#else
+            if (FormInvoke != null)
                 FormInvoke(new Action(delegate { GameProcedureStatusUpdated?.Invoke(new StatusUpdatedEventArgs(updateImportant, reason)); }));
-#endif
             else
                 GameProcedureStatusUpdated?.Invoke(new StatusUpdatedEventArgs(updateImportant, reason));
-            //System.Windows.Forms.Application.DoEvents();
         }
 
         public void SetControlStatus(ChessBoardGameControlState cState, bool updateImportant, string reason = null)
         {
             _controlStatus = cState;
             //Trace.TraceInformation("当前窗体控件状态：" + (updateImportant?@"\b ":"") + cState.ToString() + (updateImportant ? @"\b0 " : "") + "，" + @"因为：" + (reason != "" && reason != null ? reason : "无"));
-            if (_context != null)
-#if !ALTERNATIVE_SAFELY_UPDATEUI
-                _context?.Post((obj) => GameControlStatusUpdated?.Invoke(new StatusUpdatedEventArgs(updateImportant, reason)), null);
-#else
+            if (FormInvoke != null)
                 FormInvoke(new Action(delegate { GameControlStatusUpdated?.Invoke(new StatusUpdatedEventArgs(updateImportant, reason)); }));
-#endif
             else
                 GameControlStatusUpdated?.Invoke(new StatusUpdatedEventArgs(updateImportant, reason));
             //System.Windows.Forms.Application.DoEvents();
@@ -635,9 +637,10 @@ namespace TheChessBoard
                 SetProcedureStatus(pState, true, resultStr);
             }
         }
-#endregion
+        #endregion
 
-#region 和ChessGame有关的成员
+        #region 和ChessGame有关的成员
+        public ChessGame Game;
 
         public bool CareWhoseTurnItIs
         {
@@ -729,9 +732,9 @@ namespace TheChessBoard
             MoveType moveType = ApplyMove(move, alreadyValidated, out captured, manual: true);
             
             if (move.Player == Player.White)
-                _hasWhiteManuallyMoved = true;
+                HasWhiteManuallyMoved = true;
             else
-                _hasBlackManuallyMoved = true;
+                HasBlackManuallyMoved = true;
             return moveType;
         }
 
@@ -740,9 +743,9 @@ namespace TheChessBoard
             SetControlStatus(ChessBoardGameControlState.Idle, updateImportant: false);  //To clean squares
             MoveType moveType = ParseAndApplyMove(moveInStr, player, out captured, manual: true);
             if (player == Player.White)
-                _hasWhiteManuallyMoved = true;
+                HasWhiteManuallyMoved = true;
             else
-                _hasBlackManuallyMoved = true;
+                HasBlackManuallyMoved = true;
             return moveType;
         }
 
@@ -770,15 +773,12 @@ namespace TheChessBoard
                 return moveResult;
 
             SetControlStatus(ChessBoardGameControlState.Idle, true);
-            if (_context != null)
-#if !ALTERNATIVE_SAFELY_UPDATEUI
-            {
-                _context?.Post((obj) => AppliedMove?.Invoke(), null);
-                GameMoves.Add(new MoreDetailedMoveImitator(Game.Moves.Count, Game.Moves.Last(), boardPrintBackup));
-            }
-#else
-                FormInvoke(new Action(() => { GameMoves.Add(new MoreDetailedMoveImitator(Game.Moves.Count, Game.Moves.Last(), boardPrintBackup)); AppliedMove?.Invoke();  }));
-#endif
+            if (FormInvoke != null)
+                FormInvoke(new Action(() => 
+                {
+                    GameMoves.Add(new MoreDetailedMoveImitator(Game.Moves.Count, Game.Moves.Last(), boardPrintBackup));
+                    AppliedMove?.Invoke();
+                }));
             else
             {
                 GameMoves.Add(new MoreDetailedMoveImitator(Game.Moves.Count, Game.Moves.Last(), boardPrintBackup));
@@ -1038,7 +1038,6 @@ namespace TheChessBoard
                 {
                     WhiteIO = new AIProcess(execPath, execArguments, "白 AI", Properties.Settings.Default.HideAIWindow);
                     WhiteStatus = StdIOState.NotStarted;
-                    WhiteIO.Context = _context;
                     WhiteIO.LineProcess += _whiteLineProcess;
                     WhiteIO.ProcessExited += _whiteProcessExited;
                 }
@@ -1046,26 +1045,16 @@ namespace TheChessBoard
                 {
                     BlackIO = new AIProcess(execPath, execArguments, "黑 AI", Properties.Settings.Default.HideAIWindow);
                     BlackStatus = StdIOState.NotStarted;
-                    BlackIO.Context = _context;
                     BlackIO.LineProcess += _blackLineProcess;
                     BlackIO.ProcessExited += _blackProcessExited;
                 }
-                foreach (var x in new List<TraceListener>(Trace.Listeners.Cast<TraceListener>()).Where((x) => x is ChessBoardTraceListener))
-                    ((ChessBoardTraceListener)(x)).TraceSuccess(execPath.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " " + execArguments.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " 成功载入到" + (player == Player.White ? "白方" : "黑方"));
+                foreach (var x in new List<TraceListener>(Trace.Listeners.Cast<TraceListener>()).Where((x) => x is RichTextBoxTraceListener))
+                    ((RichTextBoxTraceListener)(x)).TraceSuccess(execPath.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " " + execArguments.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " 成功载入到" + (player == Player.White ? "白方" : "黑方"));
             }
             catch (Win32Exception)
             {
                 Trace.TraceError("错误：" + execPath.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " " + execArguments.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " 不是合法的可执行文件！");
             }
-        }
-
-        public void LoadSynchronizationContext(SynchronizationContext context)
-        {
-            _context = context;
-            if (WhiteIO != null)
-                WhiteIO.Context = _context;
-            if (BlackIO != null)
-                BlackIO.Context = _context;
         }
 
         public void ProcessWhiteStart()
