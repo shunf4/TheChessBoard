@@ -28,8 +28,8 @@ namespace TheChessBoard
         /// </summary>
         private void InitializeComponent()
         {
-            this.txbExecPath = new System.Windows.Forms.TextBox();
-            this.txbExecArguments = new System.Windows.Forms.TextBox();
+            this.txbExecPath = new System.Windows.Forms.ComboBox();
+            this.txbExecArguments = new System.Windows.Forms.ComboBox();
             this.lblExecPathCaption = new System.Windows.Forms.Label();
             this.lblExecArgumentsCaption = new System.Windows.Forms.Label();
             this.btnConfirm = new System.Windows.Forms.Button();
@@ -158,8 +158,8 @@ namespace TheChessBoard
         private System.Windows.Forms.Button btnConfirm;
         private System.Windows.Forms.Button btnCancel;
         private System.Windows.Forms.Button txbFileDialogExec;
-        public System.Windows.Forms.TextBox txbExecPath;
-        public System.Windows.Forms.TextBox txbExecArguments;
+        public System.Windows.Forms.ComboBox txbExecPath;
+        public System.Windows.Forms.ComboBox txbExecArguments;
         private System.Windows.Forms.Panel pnlMain;
         private System.Windows.Forms.Button txbFileDialogExecArg;
     }

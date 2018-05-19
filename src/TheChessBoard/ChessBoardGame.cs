@@ -98,9 +98,21 @@ namespace TheChessBoard
     /// </summary>
     public enum StdIOState
     {
+        /// <summary>
+        /// 没有载入进程文件。
+        /// </summary>
         NotLoaded,
+        /// <summary>
+        /// 载入了进程文件，但是没有开始。
+        /// </summary>
         NotStarted,
+        /// <summary>
+        /// 开始运行了，但是现在还不需要读它的输入。
+        /// </summary>
         NotRequesting,
+        /// <summary>
+        /// 正在读取它的输入，阻塞中。
+        /// </summary>
         Requesting,
     }
 
@@ -176,11 +188,22 @@ namespace TheChessBoard
     public delegate object FormInvoke(Delegate g);
 
     /// <summary>
-    /// 与 TheChessBoard（前台窗体）直接相关的，但是更偏重于游戏进程的逻辑状态而不是 UI 的象棋棋局类。
+    /// 与 TheChessBoard（前台窗体）直接相关的，但是更偏重于游戏进程的逻辑状态而不是 UI 的象棋棋局的类。
     /// </summary>
     public class ChessBoardGame : INotifyPropertyChanged
     {
+        /// <summary>
+        /// 秒表刷新间隔，默认为 17 毫秒。
+        /// </summary>
         private static int _defaultWaitPeriod = 17;
+
+        /// <summary>
+        /// 从窗体 TheChessBoard 类处会给 FormInvoke 赋值为一个线程安全的函数 FormInvoke。
+        /// FormInvoke 接受的参数是一个函数，可以以安全的形式（即用创建窗体 TheChessBoard 的主线程）来执行参数中的函数。
+        /// 那么以后要做有关刷新 UI （或者有可能调用刷新 UI 的函数）的函数时，就统一交由 FormInvoke 来做。
+        /// 因为如果在新线程中刷新 UI，会有不安全的因素出现。
+        /// </summary>
+        public FormInvoke FormInvoke;
 
         /// <summary>
         /// 无参构造，从默认的 _defaultGameCreationData 构造象棋游戏。
@@ -200,6 +223,93 @@ namespace TheChessBoard
             BlackStatus = StdIOState.NotLoaded;
         }
 
+
+        #region 状态成员变量
+        private ChessBoardGameControlState _controlStatus;
+        private ChessBoardGameProcedureState _procedureStatus;
+        private StdIOState _whiteStatus;
+        private StdIOState _blackStatus;
+        public GameMode Mode;
+
+        public bool HasWhiteManuallyMoved { get; private set; }
+        public bool HasBlackManuallyMoved { get; private set; }
+
+        /// <summary>
+        /// 窗体控件状态。
+        /// </summary>
+        public ChessBoardGameControlState ControlStatus
+        {
+            // get 访问器：当“取”这个成员的时候，要做的事。
+            get { return _controlStatus; }
+            // set 访问器：当“设置”这个成员的时候，要做的事。
+            set
+            {
+                _controlStatus = value;
+                //Trace.TraceInformation("当前窗体控件状态：" + value.ToString());
+                if (FormInvoke != null)
+                    FormInvoke(new Action(delegate { GameControlStatusUpdated?.Invoke(new StatusUpdatedEventArgs()); }));
+                else
+                    GameControlStatusUpdated?.Invoke(new StatusUpdatedEventArgs());
+            }
+        }
+
+        /// <summary>
+        /// 游戏进行状态。
+        /// </summary>
+        public ChessBoardGameProcedureState ProcedureStatus
+        {
+            get { return _procedureStatus; }
+            set
+            {
+                _procedureStatus = value;
+                Trace.TraceInformation("当前游戏进行状态：" + value.ToString());
+                if (FormInvoke != null)
+                    FormInvoke(new Action(delegate { GameProcedureStatusUpdated?.Invoke(new StatusUpdatedEventArgs()); }));
+                else
+                    GameProcedureStatusUpdated?.Invoke(new StatusUpdatedEventArgs());
+            }
+        }
+
+        /// <summary>
+        /// 白 AI 状态。
+        /// </summary>
+        public StdIOState WhiteStatus
+        {
+            get { return _whiteStatus; }
+            set
+            {
+                _whiteStatus = value;
+                if (value != StdIOState.NotRequesting && value != StdIOState.Requesting)
+                    Trace.TraceInformation("当前白 AI 状态：" + value.ToString());
+                if (FormInvoke != null)
+                    FormInvoke(new Action(delegate { PlayerIOStatusUpdated?.Invoke(new StatusUpdatedEventArgs()); }));
+                else
+                    PlayerIOStatusUpdated?.Invoke(new StatusUpdatedEventArgs());
+            }
+        }
+
+        /// <summary>
+        /// 黑 AI 状态。
+        /// </summary>
+        public StdIOState BlackStatus
+        {
+            get { return _blackStatus; }
+            set
+            {
+                _blackStatus = value;
+                if (value != StdIOState.NotRequesting && value != StdIOState.Requesting)
+                    Trace.TraceInformation("当前黑 AI 状态：" + value.ToString());
+                if (FormInvoke != null)
+                    FormInvoke(new Action(delegate { PlayerIOStatusUpdated?.Invoke(new StatusUpdatedEventArgs()); }));
+                else
+                    PlayerIOStatusUpdated?.Invoke(new StatusUpdatedEventArgs());
+            }
+        }
+        #endregion
+
+        /// <summary>
+        /// 初始化或重新初始化这个 ChessBoardGame 的逻辑状态。
+        /// </summary>
         void Init()
         {
             Trace.TraceInformation("棋盘游戏开始初始化。");
@@ -209,17 +319,21 @@ namespace TheChessBoard
             HasBlackManuallyMoved = false;
             Mode = GameMode.NotStarted;
             if(_updateUIDoneAfterMoveLocks != null)
+                // 把所有因更新 UI 导致的阻塞全部解除。
                 foreach (var uiLock in _updateUIDoneAfterMoveLocks)
                     uiLock.Set();
             if (_waitWatchChessLocks != null)
+                // 把秒表更新之前的阻塞解除。
                 foreach (var waitLock in _waitWatchChessLocks)
-                waitLock.Set();
-
+                    waitLock.Set();
+            
+            // 清空这些阻塞锁。
             _updateUIDoneAfterMoveLocks = new List<ManualResetEvent>();
             _waitWatchChessLocks = new List<ManualResetEvent>();
             _allThreadsDoneLocks = new List<ManualResetEvent>();
             _updateWatchLoopLock.Reset();
 
+            // 清空游戏历史步骤。
             GameMoves = new BindingList<MoreDetailedMoveImitator>();
             GameMoves.Add(new MoreDetailedMoveImitator(0, Player.None, " - ", "开局", BoardPrint));
 
@@ -227,6 +341,10 @@ namespace TheChessBoard
             Trace.TraceInformation("棋盘游戏初始化完成。");
         }
 
+        /// <summary>
+        /// 以模式 mode 开始这个象棋游戏。
+        /// </summary>
+        /// <param name="mode">要选择的模式。</param>
         public void Start(GameMode mode)
         {
             if (WhiteStatus == StdIOState.NotStarted)
@@ -244,22 +362,94 @@ namespace TheChessBoard
 
             foreach (var x in new List<TraceListener>(Trace.Listeners.Cast<TraceListener>()).Where((x) => x is RichTextBoxTraceListener))
                 ((RichTextBoxTraceListener)(x)).TraceSuccess("游戏开始，模式：" + Mode.ToString());
+
+            // 游戏开始时，有可能先手是自动模式，所以要立即触发读取下一个走子。
             InvokeNextMoveRequest(WhoseTurn, null);
         }
 
-        public void ResetAll()
+        /// <summary>
+        /// 强制停止这个游戏。
+        /// </summary>
+        public void Stop()
         {
-            ResetGame();
-            WhiteIO.LineProcess -= _whiteLineProcess;
-            BlackIO.LineProcess -= _blackLineProcess;
-            WhiteIO.ProcessExited -= _whiteProcessExited;
-            BlackIO.ProcessExited -= _blackProcessExited;
-            WhiteIO.Dispose();
-            BlackIO.Dispose();
-            WhiteIO = null;
-            BlackIO = null;
+            Trace.TraceInformation("游戏正在停止，清理残余进程……");
+            _whiteStatus = _whiteStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotRequesting;
+            _blackStatus = _blackStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotRequesting;
+            _controlStatus = ChessBoardGameControlState.Stopped;
+            _procedureStatus = ChessBoardGameProcedureState.Stopped;
+
+            // 解除所有阻塞锁。
+            foreach (var uiLock in _updateUIDoneAfterMoveLocks)
+                uiLock.Set();
+            foreach (var waitLock in _waitWatchChessLocks)
+                waitLock.Set();
+            _updateWatchLoopLock.Set();
+
+            Thread.Sleep(200);
+            if (_allThreadsDoneLocks.Count > 0)
+            //WaitHandle.WaitAll(_allThreadsDoneLocks.Where((m) => m != null).ToArray(), 1000);   //Time
+            {
+                try
+                {
+                    foreach (var m in _allThreadsDoneLocks)
+                    {
+                        // 逐个等待进程结束
+                        m?.WaitOne(1000);
+                    }
+                }
+                catch (InvalidOperationException e)
+                {
+                    Trace.TraceError("清理进程错误：" + e.Message + Environment.NewLine + e.StackTrace);
+                }
+            }
+            Trace.TraceInformation("残余进程清理完成。");
+            WhiteStatus = _whiteStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotRequesting;
+            BlackStatus = _blackStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotRequesting;
+            ControlStatus = ChessBoardGameControlState.Stopped;
+            SetProcedureStatus(ChessBoardGameProcedureState.Stopped, true, "游戏被终止。");
+
+            System.Windows.Forms.Application.DoEvents();
         }
 
+        /// <summary>
+        /// 强行终止游戏，并将游戏的各状态复位。和 Stop 的逻辑差不多。
+        /// </summary>
+        public void KillAllAndResetStatus()
+        {
+            _whiteStatus = _whiteStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotStarted;
+            _blackStatus = _blackStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotStarted;
+            _controlStatus = ChessBoardGameControlState.NotStarted;
+            _procedureStatus = ChessBoardGameProcedureState.NotStarted;
+            foreach (var uiLock in _updateUIDoneAfterMoveLocks)
+                uiLock.Set();
+            foreach (var waitLock in _waitWatchChessLocks)
+                waitLock.Set();
+
+            _updateWatchLoopLock.Set();
+
+            Thread.Sleep(200);
+            if (_allThreadsDoneLocks.Count > 0)
+            //WaitHandle.WaitAll(_allThreadsDoneLocks.Where((m)=>m!=null).ToArray(), 1000);   //Time
+            {
+                foreach (var m in _allThreadsDoneLocks)
+                {
+                    m?.WaitOne(1000);
+                }
+            }
+
+            WhiteAIProcess?.Kill();
+            BlackAIProcess?.Kill();
+
+            WhiteStatus = _whiteStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotStarted;
+            BlackStatus = _blackStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotStarted;
+            ControlStatus = ChessBoardGameControlState.NotStarted;
+            ProcedureStatus = ChessBoardGameProcedureState.NotStarted;
+        }
+
+        /// <summary>
+        /// 以 gameCreationData 重设游戏。
+        /// </summary>
+        /// <param name="gameCreationData"></param>
         public void ResetGame(GameCreationData gameCreationData)
         {
             Trace.TraceInformation("正重置游戏，残余进程清理中……");
@@ -271,19 +461,89 @@ namespace TheChessBoard
             InvokeAllUpdates();
         }
 
+        /// <summary>
+        /// 以默认的 gameCreationData 重设游戏。
+        /// </summary>
         public void ResetGame()
         {
             ResetGame(_defaultGameCreationData);
         }
 
-        public FormInvoke FormInvoke;
+        /// <summary>
+        /// 刷新一遍所有的状态。
+        /// 因为这几个状态都是挂钩到主窗体上的文字、和控件是否可用上的，触发这个函数可以强制调用这几个状态的更新函数，从而刷新主窗体。
+        /// </summary>
+        /// <param name="updateImportant"></param>
+        public void InvokeAllUpdates(bool updateImportant = false)
+        {
+            var commonEventArgs = new StatusUpdatedEventArgs(updateImportant);
+            if (FormInvoke != null)
+            {
+                FormInvoke(new Action(delegate { GameProcedureStatusUpdated?.Invoke(commonEventArgs); }));
+                FormInvoke(new Action(delegate { GameControlStatusUpdated?.Invoke(commonEventArgs); }));
+                FormInvoke(new Action(delegate { PlayerIOStatusUpdated?.Invoke(commonEventArgs); }));
+            }
+            else
+            {
+                GameProcedureStatusUpdated?.Invoke(commonEventArgs);
+                GameControlStatusUpdated?.Invoke(commonEventArgs);
+                PlayerIOStatusUpdated?.Invoke(commonEventArgs);
+            }
+            NotifyPropertyChanged(new[] { "BoardPrint", "WhoseTurn", "CareWhoseTurnItIs", "WhiteStopwatchTime", "BlackStopwatchTime" }, null);
+        }
 
-        #region INotifyPropertyChanged 成员
+
+
+
+        #region 与线程事件有关的成员对象（线程锁、各种EventHandler）
+        /// <summary>
+        /// 秒表更新有关的锁，当它阻塞的时候就一直刷新秒表。当它放通的时候，计时就已经结束，不需要刷新秒表了。
+        /// </summary>
+        ManualResetEvent _updateWatchLoopLock = new ManualResetEvent(false);
+
+        /// <summary>
+        /// UI 更新有关的锁。当 UI 在更新的时候，这个锁就一直阻塞，不在 ApplyMove 中自动触发读取下一个走子的操作。当 UI 最终更新完毕，这个锁放行，允许读取下一个走子。
+        /// </summary>
+        List<ManualResetEvent> _updateUIDoneAfterMoveLocks;
+
+        /// <summary>
+        /// 当主线程每启动一个新的线程时，这个线程就会设立一个等待阻塞锁，并将这个锁插入到 _allThreadsDoneLocks 中，直到线程运行完成才解除这个锁的阻塞。这样，在需要对游戏进行“停止”或“重置”操作时，就可以等待里面的锁全部解除阻塞才开始重置，这样比较安全。
+        /// </summary>
+        List<ManualResetEvent> _allThreadsDoneLocks;
+        /// <summary>
+        /// 观棋锁。这个锁放行时，允许读取下一个走子。
+        /// </summary>
+        List<ManualResetEvent> _waitWatchChessLocks;
+
+
+        /// <summary>
+        /// 当这个类里面的某些属性改变过后，需要触发的事件。
+        /// </summary>
         public event PropertyChangedEventHandler PropertyChanged;
         /// <summary>
-        /// 只触发一个属性更新。
+        /// 当游戏进行状态改变过后，需要触发的事件。
         /// </summary>
-        /// <param name="propertyName"></param>
+        public event GameProcedureStatusUpdatedEventHandler GameProcedureStatusUpdated;
+        /// <summary>
+        /// 当窗体控件状态改变过后，需要触发的事件。
+        /// </summary>
+        public event GameControlStatusUpdatedEventHandler GameControlStatusUpdated;
+        /// <summary>
+        /// 当将一个走子应用到棋盘上后，需要触发的事件。
+        /// </summary>
+        public event AppliedMoveEventHandler AppliedMove;
+        /// <summary>
+        /// 当有一方 AI 的状态发生改变时，需要触发的事件。
+        /// </summary>
+        public event PlayerIOStatusUpdatedEventHandler PlayerIOStatusUpdated;
+
+
+
+
+        /// <summary>
+        /// 触发属性更新事件：只触发一个属性更新事件。
+        /// </summary>
+        /// <param name="propertyName">触发更新的属性名。</param>
         private void NotifyPropertyChanged([CallerMemberName] String propertyName = "")
         {
             if (FormInvoke != null)
@@ -298,10 +558,11 @@ namespace TheChessBoard
         }
 
         /// <summary>
-        /// 触发多个属性更新
+        /// 触发属性更新事件：触发多个属性更新事件。
         /// </summary>
-        /// <param name="propertyNames"></param>
-        /// <param name="uiLock"></param>
+        /// <param name="propertyNames">触发更新的属性名。</param>
+        /// <param name="uiLock">由于只在一个地方用到多属性更新（ApplyMove），而且需要用到 uiLock，所以就加为了参数。
+        /// 由于触发更新属性要做的操作大多数是更新 UI，所以 uiLock 是作为一个阻塞锁存在的，当更新完 UI 之后解除阻塞。</param>
         private void NotifyPropertyChanged(String[] propertyNames, ManualResetEvent uiLock)
         {
             if (PropertyChanged == null) return;
@@ -311,6 +572,7 @@ namespace TheChessBoard
                 {
                     foreach (var propertyName in propertyNames)
                         PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+                    // 解除 UI 阻塞锁。
                     uiLock?.Set();
                 }));
             }
@@ -320,21 +582,80 @@ namespace TheChessBoard
                     PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
                 uiLock?.Set();
             }
+            // 这句我也不太清楚，大概就是刚才做了一堆操作，现在触发这个函数就是让系统把积压的操作全部做完。
             System.Windows.Forms.Application.DoEvents();
         }
-#endregion
 
-#region 与线程事件有关的成员对象（线程锁、各种EventHandler）
-        ManualResetEvent _updateWatchLoopLock = new ManualResetEvent(false);
-        List<ManualResetEvent> _updateUIDoneAfterMoveLocks;
-        List<ManualResetEvent> _allThreadsDoneLocks;
-        List<ManualResetEvent> _waitWatchChessLocks;
 
-        public event GameProcedureStatusUpdatedEventHandler GameProcedureStatusUpdated;
-        public event GameControlStatusUpdatedEventHandler GameControlStatusUpdated;
-        public event AppliedMoveEventHandler AppliedMove;
-        public event PlayerIOStatusUpdatedEventHandler PlayerIOStatusUpdated;
+        #endregion
 
+#region 和两个AI进程有关的成员对象
+        /// <summary>
+        /// 白 AI 进程。
+        /// </summary>
+        public AIProcess WhiteAIProcess;
+        /// <summary>
+        /// 黑 AI 进程。
+        /// </summary>
+        public AIProcess BlackAIProcess;
+
+        // 下面几个自行体会。
+
+        public string WhiteStopwatchTime
+        {
+            get
+            {
+                if (WhiteAIProcess == null)
+                {
+                    return "--:--.-------";
+                }
+                var t = WhiteAIProcess.Watch.Elapsed;
+                return string.Format("{0}:{1}", Math.Floor(t.TotalMinutes), t.ToString("ss\\.fffffff"));
+            }
+        }
+
+        public string WhiteStopwatchStatus
+        {
+            get
+            {
+                if (WhiteAIProcess == null)
+                {
+                    return "No";
+                }
+                return WhiteAIProcess.Watch.IsRunning ? "Yes" : "No";
+            }
+        }
+
+        public string BlackStopwatchTime
+        {
+            get
+            {
+                if (BlackAIProcess == null)
+                {
+                    return "--:--.-------";
+                }
+                var t = BlackAIProcess.Watch.Elapsed;
+                return string.Format("{0}:{1}", Math.Floor(t.TotalMinutes), t.ToString("ss\\.fffffff"));
+            }
+        }
+
+        public string BlackStopwatchStatus
+        {
+            get
+            {
+                if (BlackAIProcess == null)
+                {
+                    return "No";
+                }
+                return BlackAIProcess.Watch.IsRunning ? "Yes" : "No";
+            }
+        }
+
+
+        /// <summary>
+        /// 刷新秒表用的函数。在 _updateWatchLoopLock 解除阻塞之前，一直循环，通过 NotifyPropertyChanged 通知主窗体更新秒表 label。
+        /// </summary>
+        /// <param name="obj">秒表的计时字符串</param>
         void ThreadUpdateUIWatchHelper(object obj)
         {
             if (ProcedureStatus != ChessBoardGameProcedureState.Running)
@@ -359,218 +680,16 @@ namespace TheChessBoard
             _allThreadsDoneLocks.Remove(mre);
         }
 
-        public void InvokeAllUpdates(bool updateImportant = false)
-        {
-            var commonEventArgs = new StatusUpdatedEventArgs(updateImportant);
-            if (FormInvoke != null)
-            {
-                FormInvoke(new Action(delegate { GameProcedureStatusUpdated?.Invoke(commonEventArgs); }));
-                FormInvoke(new Action(delegate { GameControlStatusUpdated?.Invoke(commonEventArgs); }));
-                FormInvoke(new Action(delegate { PlayerIOStatusUpdated?.Invoke(commonEventArgs); }));
-            }
-            else
-            {
-                GameProcedureStatusUpdated?.Invoke(commonEventArgs);
-                GameControlStatusUpdated?.Invoke(commonEventArgs);
-                PlayerIOStatusUpdated?.Invoke(commonEventArgs);
-            }
-            NotifyPropertyChanged(new[] { "BoardPrint", "WhoseTurn", "CareWhoseTurnItIs", "WhiteStopwatchTime", "BlackStopwatchTime" }, null);
-        }
-
-        public void KillAllAndResetStatus()
-        {
-            _whiteStatus = _whiteStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotStarted;
-            _blackStatus = _blackStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotStarted;
-            _controlStatus = ChessBoardGameControlState.NotStarted;
-            _procedureStatus = ChessBoardGameProcedureState.NotStarted;
-            foreach (var uiLock in _updateUIDoneAfterMoveLocks)
-                uiLock.Set();
-            foreach (var waitLock in _waitWatchChessLocks)
-                waitLock.Set();
-            
-            _updateWatchLoopLock.Set();
-
-            Thread.Sleep(200);
-            if(_allThreadsDoneLocks.Count > 0)
-            //WaitHandle.WaitAll(_allThreadsDoneLocks.Where((m)=>m!=null).ToArray(), 1000);   //Time
-            {
-                foreach(var m in _allThreadsDoneLocks)
-                {
-                    m?.WaitOne(1000);
-                }
-            }
-
-            WhiteIO?.Kill();
-            BlackIO?.Kill();
-
-            WhiteStatus = _whiteStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotStarted;
-            BlackStatus = _blackStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotStarted;
-            ControlStatus = ChessBoardGameControlState.NotStarted;
-            ProcedureStatus = ChessBoardGameProcedureState.NotStarted;
-        }
-
-        public void Stop()
-        {
-            Trace.TraceInformation("游戏正在停止，清理残余进程……");
-            _whiteStatus = _whiteStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotRequesting;
-            _blackStatus = _blackStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotRequesting;
-            _controlStatus = ChessBoardGameControlState.Stopped;
-            _procedureStatus = ChessBoardGameProcedureState.Stopped;
-            foreach (var uiLock in _updateUIDoneAfterMoveLocks)
-                uiLock.Set();
-            foreach (var waitLock in _waitWatchChessLocks)
-                waitLock.Set();
-            _updateWatchLoopLock.Set();
-
-            Thread.Sleep(200);
-            if (_allThreadsDoneLocks.Count > 0)
-            //WaitHandle.WaitAll(_allThreadsDoneLocks.Where((m) => m != null).ToArray(), 1000);   //Time
-            {
-                try
-                {
-                    foreach (var m in _allThreadsDoneLocks)
-                    {
-                        m?.WaitOne(1000);
-                    }
-                }catch(InvalidOperationException e)
-                {
-                    Trace.TraceError("清理进程错误：" + e.Message + Environment.NewLine + e.StackTrace);
-                }
-            }
-            Trace.TraceInformation("残余进程清理完成。");
-            WhiteStatus = _whiteStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotRequesting;
-            BlackStatus = _blackStatus == StdIOState.NotLoaded ? StdIOState.NotLoaded : StdIOState.NotRequesting;
-            ControlStatus = ChessBoardGameControlState.Stopped;
-            SetProcedureStatus(ChessBoardGameProcedureState.Stopped, true, "游戏被终止。");
-
-            System.Windows.Forms.Application.DoEvents();
-        }
-
         #endregion
 
-#region 和两个AI进程有关的成员对象
-        public AIProcess WhiteIO;
-        public AIProcess BlackIO;
-
-        public string WhiteStopwatchTime
-        {
-            get
-            {
-                if (WhiteIO == null)
-                {
-                    return "--:--.-------";
-                }
-                var t = WhiteIO.Watch.Elapsed;
-                return string.Format("{0}:{1}", Math.Floor(t.TotalMinutes), t.ToString("ss\\.fffffff"));
-            }
-        }
-
-        public string WhiteStopwatchStatus
-        {
-            get
-            {
-                if (WhiteIO == null)
-                {
-                    return "No";
-                }
-                return WhiteIO.Watch.IsRunning ? "Yes" : "No";
-            }
-        }
-
-        public string BlackStopwatchTime
-        {
-            get
-            {
-                if (BlackIO == null)
-                {
-                    return "--:--.-------";
-                }
-                var t = BlackIO.Watch.Elapsed;
-                return string.Format("{0}:{1}", Math.Floor(t.TotalMinutes), t.ToString("ss\\.fffffff"));
-            }
-        }
-
-        public string BlackStopwatchStatus
-        {
-            get
-            {
-                if (BlackIO == null)
-                {
-                    return "No";
-                }
-                return BlackIO.Watch.IsRunning ? "Yes" : "No";
-            }
-        }
-
-#endregion
-
-#region 和当前游戏的窗体状态、游戏进程状态有关的成员
-        private ChessBoardGameControlState _controlStatus;
-        private ChessBoardGameProcedureState _procedureStatus;
-        private StdIOState _whiteStatus;
-        private StdIOState _blackStatus;
-        public GameMode Mode;
-
-        public bool HasWhiteManuallyMoved { get; private set; }
-        public bool HasBlackManuallyMoved { get; private set; }
-
-        public ChessBoardGameControlState ControlStatus
-        {
-            get { return _controlStatus; }
-            set
-            {
-                _controlStatus = value;
-                //Trace.TraceInformation("当前窗体控件状态：" + value.ToString());
-                if (FormInvoke != null)
-                    FormInvoke(new Action(delegate { GameControlStatusUpdated?.Invoke(new StatusUpdatedEventArgs()); }));
-                else
-                    GameControlStatusUpdated?.Invoke(new StatusUpdatedEventArgs());
-            }
-        }
-        public ChessBoardGameProcedureState ProcedureStatus
-        {
-            get { return _procedureStatus; }
-            set
-            {
-                _procedureStatus = value;
-                Trace.TraceInformation("当前游戏进程状态：" + value.ToString());
-                if (FormInvoke != null)
-                    FormInvoke(new Action(delegate { GameProcedureStatusUpdated?.Invoke(new StatusUpdatedEventArgs()); }));
-                else
-                    GameProcedureStatusUpdated?.Invoke(new StatusUpdatedEventArgs());
-            }
-        }
-
-        public StdIOState WhiteStatus
-        {
-            get { return _whiteStatus; }
-            set
-            {
-                _whiteStatus = value;
-                if(value != StdIOState.NotRequesting && value != StdIOState.Requesting)
-                    Trace.TraceInformation("当前白 AI 状态：" + value.ToString());
-                if (FormInvoke != null)
-                    FormInvoke(new Action(delegate { PlayerIOStatusUpdated?.Invoke(new StatusUpdatedEventArgs()); }));
-                else
-                    PlayerIOStatusUpdated?.Invoke(new StatusUpdatedEventArgs());
-            }
-        }
-
-        public StdIOState BlackStatus
-        {
-            get { return _blackStatus; }
-            set
-            {
-                _blackStatus = value;
-                if (value != StdIOState.NotRequesting && value != StdIOState.Requesting)
-                    Trace.TraceInformation("当前黑 AI 状态：" + value.ToString());
-                if (FormInvoke != null)
-                    FormInvoke(new Action(delegate { PlayerIOStatusUpdated?.Invoke(new StatusUpdatedEventArgs()); }));
-                else
-                    PlayerIOStatusUpdated?.Invoke(new StatusUpdatedEventArgs());
-            }
-        }
-
+        #region 和当前游戏的窗体状态、游戏进程状态有关的成员
+        
+        /// <summary>
+        /// 也是设置 ProcedureStatus，和它的 set 访问器的不同点在于多了一些可传递的选项。
+        /// </summary>
+        /// <param name="pState">要设置的状态。</param>
+        /// <param name="updateImportant">这一设置是否是“重要的”。</param>
+        /// <param name="reason">设置的原因。</param>
         public void SetProcedureStatus(ChessBoardGameProcedureState pState, bool updateImportant, string reason = null)
         {
             _procedureStatus = pState;
@@ -581,6 +700,12 @@ namespace TheChessBoard
                 GameProcedureStatusUpdated?.Invoke(new StatusUpdatedEventArgs(updateImportant, reason));
         }
 
+        /// <summary>
+        /// 也是设置 ControlStatus，和它的 set 访问器的不同点在于多了一些可传递的选项。
+        /// </summary>
+        /// <param name="cState"></param>
+        /// <param name="updateImportant"></param>
+        /// <param name="reason"></param>
         public void SetControlStatus(ChessBoardGameControlState cState, bool updateImportant, string reason = null)
         {
             _controlStatus = cState;
@@ -592,7 +717,10 @@ namespace TheChessBoard
             //System.Windows.Forms.Application.DoEvents();
         }
 
-        public void GameProcedureStatusUpdate()
+        /// <summary>
+        /// 判断游戏是否终止，如果终止的话就更新 ProcedureStatus。
+        /// </summary>
+        public void UpdateProcedureStatusIfGameEnds()
         {
             bool whiteWins = Game.IsCheckmated(Player.Black);
             bool blackWins = Game.IsCheckmated(Player.White);
@@ -634,12 +762,15 @@ namespace TheChessBoard
                     throw new Exception();
                 }
 
-                SetProcedureStatus(pState, true, resultStr);
+                SetProcedureStatus(pState, updateImportant : true, reason : resultStr);
             }
         }
         #endregion
 
         #region 和ChessGame有关的成员
+        /// <summary>
+        /// 实现象棋规则的 ChessGame 成员。
+        /// </summary>
         public ChessGame Game;
 
         public bool CareWhoseTurnItIs
@@ -663,6 +794,9 @@ namespace TheChessBoard
             }
         }
 
+        /// <summary>
+        /// 将 Game 里的棋盘状态转成六十四个字符组成的数组，和 Form 中的棋盘字符相关。
+        /// </summary>
         public char[] BoardPrint
         {
             get
@@ -679,6 +813,7 @@ namespace TheChessBoard
                         SquareColor sc = ((r + j) % 2 == 1) ? SquareColor.SquareBlack : SquareColor.SquareWhite;
                         if (piece == null)
                         {
+                            // 在那个字体里， + 是黑方块，空格是白方块。
                             charOnBoard = (sc == SquareColor.SquareBlack) ? '+' : ' ';
                         }
                         else
@@ -785,14 +920,14 @@ namespace TheChessBoard
                 AppliedMove?.Invoke();
             }
 
-            GameProcedureStatusUpdate();
+            UpdateProcedureStatusIfGameEnds();
 
             if (move.Player == Player.White)
             {
                 if (BlackStatus == StdIOState.NotRequesting && !(HasBlackManuallyMoved))
                 {
                     Trace.TraceInformation("向黑 AI 发送：" + Game.Moves.Last().SANString);
-                    BlackIO.WriteLine(Game.Moves.Last().StoredSANString);
+                    BlackAIProcess.WriteLine(Game.Moves.Last().StoredSANString);
                 }
             }
             else
@@ -800,7 +935,7 @@ namespace TheChessBoard
                 if (WhiteStatus == StdIOState.NotRequesting && !(HasWhiteManuallyMoved))
                 {
                     Trace.TraceInformation("向白 AI 发送：" + Game.Moves.Last().SANString);
-                    WhiteIO?.WriteLine(Game.Moves.Last().StoredSANString);
+                    WhiteAIProcess?.WriteLine(Game.Moves.Last().StoredSANString);
                 }
             }
 
@@ -937,7 +1072,7 @@ namespace TheChessBoard
 
             if (error)
             {
-                WhiteIO.WriteLine(".");
+                WhiteAIProcess.WriteLine(".");
                 ProcessAllowOutputAndWait(StdIOType.White);
                 Trace.TraceWarning(@"向白 AI 发送：\b 重走\b0 ");
                 mre.Set();
@@ -989,7 +1124,7 @@ namespace TheChessBoard
                 return;
             if (error)
             {
-                BlackIO.WriteLine(".");
+                BlackAIProcess.WriteLine(".");
                 ProcessAllowOutputAndWait(StdIOType.Black);
                 Trace.TraceWarning(@"向黑 AI 发送：\b 重走\b0 ");
                 mre.Set();
@@ -1036,17 +1171,17 @@ namespace TheChessBoard
             {
                 if (player == Player.White)
                 {
-                    WhiteIO = new AIProcess(execPath, execArguments, "白 AI", Properties.Settings.Default.HideAIWindow);
+                    WhiteAIProcess = new AIProcess(execPath, execArguments, "白 AI", Properties.Settings.Default.HideAIWindow);
                     WhiteStatus = StdIOState.NotStarted;
-                    WhiteIO.LineProcess += _whiteLineProcess;
-                    WhiteIO.ProcessExited += _whiteProcessExited;
+                    WhiteAIProcess.LineProcess += _whiteLineProcess;
+                    WhiteAIProcess.ProcessExited += _whiteProcessExited;
                 }
                 else
                 {
-                    BlackIO = new AIProcess(execPath, execArguments, "黑 AI", Properties.Settings.Default.HideAIWindow);
+                    BlackAIProcess = new AIProcess(execPath, execArguments, "黑 AI", Properties.Settings.Default.HideAIWindow);
                     BlackStatus = StdIOState.NotStarted;
-                    BlackIO.LineProcess += _blackLineProcess;
-                    BlackIO.ProcessExited += _blackProcessExited;
+                    BlackAIProcess.LineProcess += _blackLineProcess;
+                    BlackAIProcess.ProcessExited += _blackProcessExited;
                 }
                 foreach (var x in new List<TraceListener>(Trace.Listeners.Cast<TraceListener>()).Where((x) => x is RichTextBoxTraceListener))
                     ((RichTextBoxTraceListener)(x)).TraceSuccess(execPath.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " " + execArguments.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " 成功载入到" + (player == Player.White ? "白方" : "黑方"));
@@ -1059,9 +1194,9 @@ namespace TheChessBoard
 
         public void ProcessWhiteStart()
         {
-            WhiteIO.Start();
+            WhiteAIProcess.Start();
             Trace.TraceInformation("白 AI 启动。");
-            WhiteIO.WriteLine("white");
+            WhiteAIProcess.WriteLine("white");
             Trace.TraceInformation(@"向白 AI 写入：\b white\b0");
 
             WhiteStatus = StdIOState.NotRequesting;
@@ -1069,9 +1204,9 @@ namespace TheChessBoard
 
         public void ProcessBlackStart()
         {
-            BlackIO.Start();
+            BlackAIProcess.Start();
             Trace.TraceInformation("黑 AI 启动。");
-            BlackIO.WriteLine("black");
+            BlackAIProcess.WriteLine("black");
             Trace.TraceInformation(@"向黑 AI 写入：\b black\b0");
 
             BlackStatus = StdIOState.NotRequesting;
@@ -1119,18 +1254,18 @@ namespace TheChessBoard
         public void ProcessAllowOutputAndWait(StdIOType type)
         {
             ControlStatus = ChessBoardGameControlState.StdIORunning;
-            var IO = type == StdIOType.White ? WhiteIO : BlackIO;
+            var IO = type == StdIOType.White ? WhiteAIProcess : BlackAIProcess;
             string stopwatchTimeUpdateString = type == StdIOType.White ? "WhiteStopwatchTime" : "BlackStopwatchTime";
 
             if (type == StdIOType.White)
             {
                 WhiteStatus = StdIOState.Requesting;
-                new Thread(WhiteIO.AllowOutputAndWait).Start();
+                new Thread(WhiteAIProcess.AllowOutputAndWait).Start();
             }
             else
             {
                 BlackStatus = StdIOState.Requesting;
-                new Thread(BlackIO.AllowOutputAndWait).Start();
+                new Thread(BlackAIProcess.AllowOutputAndWait).Start();
             }
 
             new Thread(ThreadUpdateUIWatchHelper).Start(stopwatchTimeUpdateString);

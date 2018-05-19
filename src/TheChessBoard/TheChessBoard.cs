@@ -87,8 +87,6 @@ namespace TheChessBoard
             lblBlackWatch.DataBindings.Clear();
             lblBlackWatch.DataBindings.Add("Text", FormGame, "BlackStopwatchTime", false, DataSourceUpdateMode.OnPropertyChanged);
 
-            var context = SynchronizationContext.Current;
-            FormGame.LoadSynchronizationContext(context);
             FormGame.FormInvoke = Invoke;
 
             RefreshHistoryMoveSourceReference();
