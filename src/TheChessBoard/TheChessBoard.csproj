@@ -94,7 +94,7 @@
     </Compile>
     <Compile Include="TheChessBoardStart.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ChessBoardGame.cs" />
+    <Compile Include="ChessBoardGameFormLogic.cs" />
     <Compile Include="AIProcess.cs" />
     <EmbeddedResource Include="AboutBox.resx">
       <DependentUpon>AboutBox.cs</DependentUpon>

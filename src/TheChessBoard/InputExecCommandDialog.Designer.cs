@@ -45,7 +45,7 @@ namespace TheChessBoard
             this.txbExecPath.Location = new System.Drawing.Point(253, 22);
             this.txbExecPath.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.txbExecPath.Name = "txbExecPath";
-            this.txbExecPath.Size = new System.Drawing.Size(501, 27);
+            this.txbExecPath.Size = new System.Drawing.Size(501, 28);
             this.txbExecPath.TabIndex = 0;
             // 
             // txbExecArguments
@@ -53,7 +53,7 @@ namespace TheChessBoard
             this.txbExecArguments.Location = new System.Drawing.Point(253, 75);
             this.txbExecArguments.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.txbExecArguments.Name = "txbExecArguments";
-            this.txbExecArguments.Size = new System.Drawing.Size(501, 27);
+            this.txbExecArguments.Size = new System.Drawing.Size(501, 28);
             this.txbExecArguments.TabIndex = 1;
             // 
             // lblExecPathCaption

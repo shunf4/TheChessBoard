@@ -258,6 +258,10 @@ namespace ChessDotNet
         /// 本游戏记录的历史移动。历史移动统一用 MoreDetailedMove 以记载更多信息。
         /// </summary>
         List<MoreDetailedMove> _moves = new List<MoreDetailedMove>();
+
+        /// <summary>
+        /// 本游戏记录的历史移动。历史移动统一用 MoreDetailedMove 以记载更多信息。
+        /// </summary>
         public ReadOnlyCollection<MoreDetailedMove> Moves
         {
             get
@@ -409,7 +413,7 @@ namespace ChessDotNet
         public ChessGame(ChessGame game)
         {
             GameCreationData gcd = new GameCreationData();
-            gcd.Board = game.Board;
+            gcd.Board = game.GetBoard();
             gcd.CanWhiteCastleKingSide = game.CanWhiteCastleKingSide;
             gcd.CanWhiteCastleQueenSide = game.CanWhiteCastleQueenSide;
             gcd.CanBlackCastleKingSide = game.CanBlackCastleKingSide;
@@ -496,10 +500,10 @@ namespace ChessDotNet
             if (InitialWhiteRookFileKingsideCastling == File.None) CanWhiteCastleKingSide = false;
             if (InitialWhiteRookFileQueensideCastling == File.None) CanWhiteCastleQueenSide = false;
 
-            // 此段代码存疑。
+            // 如果上一步对方进兵两格，则必须记在 Moves 里，方便后面吃过路兵的评判（会读取 Moves 的最后一项。）
             if (!data.Moves.Any() && data.EnPassant != null)
             {
-                /*Move primMove = new Move(new Position(data.EnPassant.File, data.WhoseTurn == Player.White ? 7 : 2),
+                Move primMove = new Move(new Position(data.EnPassant.File, data.WhoseTurn == Player.White ? 7 : 2),
                         new Position(data.EnPassant.File, data.WhoseTurn == Player.White ? 5 : 4),
                         ChessUtilities.GetOpponentOf(data.WhoseTurn));
                 bool causeCheck = false; // magic
@@ -516,7 +520,6 @@ namespace ChessDotNet
                     causeCheckmate
                     );
                 _moves.Add(latestMove);
-                */
             }
             else
             {
@@ -1081,6 +1084,9 @@ namespace ChessDotNet
             return GetValidMoves(from, false);
         }
 
+        /// <summary>
+        /// 重要函数。返回所有从 Position from 开始的合法走子。传递到最多参的 GetValidMoves 运行。
+        /// </summary>
         public virtual ReadOnlyCollection<MoreDetailedMove> GetValidMoves(Position from, bool returnIfAny)
         {
             return GetValidMoves(from, returnIfAny, careWhoseTurnItIs);
@@ -1371,7 +1377,7 @@ namespace ChessDotNet
             gcd.HalfMoveClock = i_halfMoveClock;
             gcd.FullMoveNumber = i_fullMoveNumber;
             ChessGame copy = new ChessGame(gcd);
-            copy.ApplyMove(move, false, out Piece captured, true);
+            copy.ApplyMove(move, true, out Piece captured, true);
             if(move is MoreDetailedMove m)
             {
                 m.AssociatedGameAfterMove = copy;

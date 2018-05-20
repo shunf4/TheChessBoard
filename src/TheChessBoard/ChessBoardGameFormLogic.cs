@@ -193,7 +193,7 @@ namespace TheChessBoard
     /// <summary>
     /// 与 TheChessBoard（前台窗体）直接相关的，但是更偏重于游戏进程的逻辑状态而不是 UI 的象棋棋局的类。
     /// </summary>
-    public class ChessBoardGame : INotifyPropertyChanged
+    public class ChessBoardGameFormLogic : INotifyPropertyChanged
     {
         /// <summary>
         /// 秒表刷新间隔，默认为 17 毫秒。
@@ -211,14 +211,14 @@ namespace TheChessBoard
         /// <summary>
         /// 无参构造，从默认的 _defaultGameCreationData 构造象棋游戏。
         /// </summary>
-        public ChessBoardGame() : this(_defaultGameCreationData)
+        public ChessBoardGameFormLogic() : this(_defaultGameCreationData)
         { }
 
         /// <summary>
         /// 从 gameCreationData 构造象棋游戏 Game。
         /// </summary>
         /// <param name="gameCreationData"></param>
-        public ChessBoardGame(GameCreationData gameCreationData)
+        public ChessBoardGameFormLogic(GameCreationData gameCreationData)
         {
             Game = new ChessGame(gameCreationData);
             Init();
@@ -248,7 +248,7 @@ namespace TheChessBoard
             set
             {
                 _controlStatus = value;
-                //Trace.TraceInformation("当前窗体控件状态：" + value.ToString());
+                Trace.TraceInformation("当前窗体控件状态：" + value.ToString());
                 if (FormInvoke != null)
                     FormInvoke(new Action(delegate { GameControlStatusUpdated?.Invoke(new StatusUpdatedEventArgs()); }));
                 else
@@ -339,6 +339,10 @@ namespace TheChessBoard
             // 清空游戏历史步骤。
             GameMoves = new BindingList<MoreDetailedMoveImitator>();
             GameMoves.Add(new MoreDetailedMoveImitator(0, Player.None, " - ", "开局", BoardPrint));
+
+            // 清空历史吃子。
+            WhiteCapturedPieces = "";
+            BlackCapturedPieces = "";
 
             InvokeAllUpdates();
             Trace.TraceInformation("棋盘游戏初始化完成。");
@@ -698,7 +702,7 @@ namespace TheChessBoard
 
         #endregion
 
-        #region 和当前游戏的窗体状态、游戏进程状态有关的成员
+        #region 和当前游戏的窗体状态、游戏进行状态有关的成员
         
         /// <summary>
         /// 也是设置 ProcedureStatus，和它的 set 访问器的不同点在于多了一些可传递的选项。
@@ -709,7 +713,7 @@ namespace TheChessBoard
         public void SetProcedureStatus(ChessBoardGameProcedureState pState, bool updateImportant, string reason = null)
         {
             _procedureStatus = pState;
-            Trace.TraceInformation("当前游戏进程状态：" + (updateImportant ? @"\b " : "") + pState.ToString() + (updateImportant ? @"\b0 " : "") + "，" + @"因为：" + (reason != "" && reason != null ? reason : "无"));
+            Trace.TraceInformation("当前游戏进行状态：" + (updateImportant ? @"\b " : "") + pState.ToString() + (updateImportant ? @"\b0 " : "") + "，" + @"因为：" + (reason != "" && reason != null ? reason : "无"));
             if (FormInvoke != null)
                 FormInvoke(new Action(delegate { GameProcedureStatusUpdated?.Invoke(new StatusUpdatedEventArgs(updateImportant, reason)); }));
             else
@@ -725,7 +729,7 @@ namespace TheChessBoard
         public void SetControlStatus(ChessBoardGameControlState cState, bool updateImportant, string reason = null)
         {
             _controlStatus = cState;
-            //Trace.TraceInformation("当前窗体控件状态：" + (updateImportant?@"\b ":"") + cState.ToString() + (updateImportant ? @"\b0 " : "") + "，" + @"因为：" + (reason != "" && reason != null ? reason : "无"));
+            Trace.TraceInformation("当前窗体控件状态：" + (updateImportant?@"\b ":"") + cState.ToString() + (updateImportant ? @"\b0 " : "") + "，" + @"因为：" + (reason != "" && reason != null ? reason : "无"));
             if (FormInvoke != null)
                 FormInvoke(new Action(delegate { GameControlStatusUpdated?.Invoke(new StatusUpdatedEventArgs(updateImportant, reason)); }));
             else
@@ -913,6 +917,48 @@ namespace TheChessBoard
         }
 
         /// <summary>
+        /// 被吃的白子。
+        /// </summary>
+        private String _whiteCapturedPieces;
+
+        /// <summary>
+        /// 被吃的白子。
+        /// </summary>
+        public String WhiteCapturedPieces
+        {
+            get
+            {
+                return _whiteCapturedPieces;
+            }
+            private set
+            {
+                _whiteCapturedPieces = value;
+                NotifyPropertyChanged("WhiteCapturedPieces");
+            }
+        }
+
+        /// <summary>
+        /// 被吃的黑子。
+        /// </summary>
+        private String _blackCapturedPieces;
+
+        /// <summary>
+        /// 被吃的黑子。
+        /// </summary>
+        public String BlackCapturedPieces
+        {
+            get
+            {
+                return _blackCapturedPieces;
+            }
+            private set
+            {
+                _blackCapturedPieces = value;
+                NotifyPropertyChanged("BlackCapturedPieces");
+            }
+        }
+
+        /// <summary>
         /// 将 Game 里的棋盘状态转成六十四个字符组成的数组，以便用特定的象棋字体显示这些字符，和 Form 中的棋盘字符相关。
         /// </summary>
         public char[] BoardPrint
@@ -971,6 +1017,7 @@ namespace TheChessBoard
         /// <returns></returns>
         public MoveType ManualMove(Move move, bool alreadyValidated, out Piece captured)
         {
+            ControlStatus = ChessBoardGameControlState.Idle;
             MoveType moveType = ApplyMove(move, alreadyValidated, out captured);
             Trace.TraceInformation((move.Player == Player.White ? "白方" : "黑方") + "手动走子：" + Game.Moves.Last().SANString);
 
@@ -990,6 +1037,7 @@ namespace TheChessBoard
         /// <returns></returns>
         public MoveType ManualMove(string moveInStr, Player player, out Piece captured)
         {
+            ControlStatus = ChessBoardGameControlState.Idle;
             Trace.TraceInformation((player == Player.White ? "白方" : "黑方") + "输入 SAN 走子：" + moveInStr);
 
             MoveType moveType = ParseAndApplyMove(moveInStr, player, out captured);
@@ -1011,6 +1059,17 @@ namespace TheChessBoard
         {
             // 对内部的象棋规则对象 Game 应用这个走子。
             var moveResult = Game.ApplyMove(move, alreadyValidated, out captured);
+
+            WhiteCapturedPieces = _whiteCapturedPieces.ToLower();
+            BlackCapturedPieces = _blackCapturedPieces.ToLower();
+
+            if (captured != null)
+            {
+                if (captured.Owner == Player.White)
+                    WhiteCapturedPieces = _whiteCapturedPieces + fenAndSquareColorMappings[Tuple.Create(captured.GetFenCharacter(), SquareColor.SquareBlack)];
+                if (captured.Owner == Player.Black)
+                    BlackCapturedPieces = _blackCapturedPieces + fenAndSquareColorMappings[Tuple.Create(captured.GetFenCharacter(), SquareColor.SquareBlack)];
+            }
 
             if (moveResult == MoveType.Invalid)
                 throw new ArgumentException("Move Invalid.");
@@ -1269,7 +1328,7 @@ namespace TheChessBoard
         /// <param name="player">要加载 AI 的 Player。</param>
         /// <param name="execPath">可执行文件地址。</param>
         /// <param name="execArguments">可执行文件参数。</param>
-        public void LoadAIExec(Player player, string execPath, string execArguments)
+        public bool LoadAIExec(Player player, string execPath, string execArguments)
         {
             try
             {
@@ -1289,10 +1348,13 @@ namespace TheChessBoard
                 }
                 foreach (var x in new List<TraceListener>(Trace.Listeners.Cast<TraceListener>()).Where((x) => x is RichTextBoxTraceListener))
                     ((RichTextBoxTraceListener)(x)).TraceSuccess(execPath.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " " + execArguments.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " 成功载入到" + (player == Player.White ? "白方" : "黑方"));
+                return true;
             }
             catch (Win32Exception)
             {
                 Trace.TraceError("错误：" + execPath.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " " + execArguments.Replace(@"\", @"\\").Replace(@"{", @"\{").Replace(@"}", @"\}") + " 不是合法的可执行文件！");
+                MessageBox.Show(execPath + " " + execArguments + " 不是合法的可执行文件！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
             }
         }
 

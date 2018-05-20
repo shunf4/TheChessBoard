@@ -39,6 +39,8 @@ namespace TheChessBoard
             this.panel1 = new System.Windows.Forms.Panel();
             this.label1 = new System.Windows.Forms.Label();
             this.panel2 = new System.Windows.Forms.Panel();
+            this.lblBlackCaptured = new System.Windows.Forms.Label();
+            this.lblWhiteCaptured = new System.Windows.Forms.Label();
             this.groupBox6 = new System.Windows.Forms.GroupBox();
             this.txbFen = new System.Windows.Forms.TextBox();
             this.groupBox5 = new System.Windows.Forms.GroupBox();
@@ -62,9 +64,9 @@ namespace TheChessBoard
             this.lblFormStatus = new System.Windows.Forms.Label();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.btnAbout = new System.Windows.Forms.Button();
-            this.btnPauseCont = new System.Windows.Forms.Button();
+            this.btnStop = new System.Windows.Forms.Button();
             this.btnAllReset = new System.Windows.Forms.Button();
-            this.btnModeConfirm = new System.Windows.Forms.Button();
+            this.btnStart = new System.Windows.Forms.Button();
             this.pnlBlackMode = new System.Windows.Forms.Panel();
             this.label4 = new System.Windows.Forms.Label();
             this.rdbBlackAuto = new System.Windows.Forms.RadioButton();
@@ -151,7 +153,7 @@ namespace TheChessBoard
             // 
             // pnlBoard
             // 
-            this.pnlBoard.Location = new System.Drawing.Point(8, 28);
+            this.pnlBoard.Location = new System.Drawing.Point(8, 14);
             this.pnlBoard.Name = "pnlBoard";
             this.pnlBoard.Size = new System.Drawing.Size(552, 536);
             this.pnlBoard.TabIndex = 8;
@@ -177,6 +179,8 @@ namespace TheChessBoard
             // 
             // panel2
             // 
+            this.panel2.Controls.Add(this.lblBlackCaptured);
+            this.panel2.Controls.Add(this.lblWhiteCaptured);
             this.panel2.Controls.Add(this.groupBox6);
             this.panel2.Controls.Add(this.groupBox5);
             this.panel2.Controls.Add(this.ckbDontCareWhoseTurnItIs);
@@ -186,6 +190,25 @@ namespace TheChessBoard
             this.panel2.Name = "panel2";
             this.panel2.Size = new System.Drawing.Size(567, 818);
             this.panel2.TabIndex = 17;
+            // 
+            // lblBlackCaptured
+            // 
+            this.lblBlackCaptured.Font = new System.Drawing.Font("Chess Leipzig", 10.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(2)));
+            this.lblBlackCaptured.Location = new System.Drawing.Point(308, 559);
+            this.lblBlackCaptured.Name = "lblBlackCaptured";
+            this.lblBlackCaptured.Size = new System.Drawing.Size(256, 51);
+            this.lblBlackCaptured.TabIndex = 22;
+            this.lblBlackCaptured.Text = "+++++++++++++++++";
+            this.lblBlackCaptured.TextAlign = System.Drawing.ContentAlignment.TopRight;
+            // 
+            // lblWhiteCaptured
+            // 
+            this.lblWhiteCaptured.Font = new System.Drawing.Font("Chess Leipzig", 10.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(2)));
+            this.lblWhiteCaptured.Location = new System.Drawing.Point(5, 559);
+            this.lblWhiteCaptured.Name = "lblWhiteCaptured";
+            this.lblWhiteCaptured.Size = new System.Drawing.Size(256, 51);
+            this.lblWhiteCaptured.TabIndex = 21;
+            this.lblWhiteCaptured.Text = "++++++++++++++++++++++";
             // 
             // groupBox6
             // 
@@ -220,7 +243,7 @@ namespace TheChessBoard
             // ckbDontCareWhoseTurnItIs
             // 
             this.ckbDontCareWhoseTurnItIs.AutoSize = true;
-            this.ckbDontCareWhoseTurnItIs.Location = new System.Drawing.Point(419, 595);
+            this.ckbDontCareWhoseTurnItIs.Location = new System.Drawing.Point(413, 610);
             this.ckbDontCareWhoseTurnItIs.Name = "ckbDontCareWhoseTurnItIs";
             this.ckbDontCareWhoseTurnItIs.Size = new System.Drawing.Size(135, 24);
             this.ckbDontCareWhoseTurnItIs.TabIndex = 18;
@@ -230,7 +253,7 @@ namespace TheChessBoard
             // 
             // lblCurrentPlayer
             // 
-            this.lblCurrentPlayer.Location = new System.Drawing.Point(222, 596);
+            this.lblCurrentPlayer.Location = new System.Drawing.Point(222, 610);
             this.lblCurrentPlayer.Name = "lblCurrentPlayer";
             this.lblCurrentPlayer.Size = new System.Drawing.Size(107, 23);
             this.lblCurrentPlayer.TabIndex = 17;
@@ -398,9 +421,9 @@ namespace TheChessBoard
             // groupBox3
             // 
             this.groupBox3.Controls.Add(this.btnAbout);
-            this.groupBox3.Controls.Add(this.btnPauseCont);
+            this.groupBox3.Controls.Add(this.btnStop);
             this.groupBox3.Controls.Add(this.btnAllReset);
-            this.groupBox3.Controls.Add(this.btnModeConfirm);
+            this.groupBox3.Controls.Add(this.btnStart);
             this.groupBox3.Controls.Add(this.pnlBlackMode);
             this.groupBox3.Controls.Add(this.pnlWhiteMode);
             this.groupBox3.Location = new System.Drawing.Point(23, 261);
@@ -420,15 +443,15 @@ namespace TheChessBoard
             this.btnAbout.UseVisualStyleBackColor = true;
             this.btnAbout.Click += new System.EventHandler(this.btnAbout_Click);
             // 
-            // btnPauseCont
+            // btnStop
             // 
-            this.btnPauseCont.Location = new System.Drawing.Point(88, 126);
-            this.btnPauseCont.Name = "btnPauseCont";
-            this.btnPauseCont.Size = new System.Drawing.Size(70, 30);
-            this.btnPauseCont.TabIndex = 6;
-            this.btnPauseCont.Text = "停止(&P)";
-            this.btnPauseCont.UseVisualStyleBackColor = true;
-            this.btnPauseCont.Click += new System.EventHandler(this.btnPauseCont_Click);
+            this.btnStop.Location = new System.Drawing.Point(88, 126);
+            this.btnStop.Name = "btnStop";
+            this.btnStop.Size = new System.Drawing.Size(70, 30);
+            this.btnStop.TabIndex = 6;
+            this.btnStop.Text = "停止(&P)";
+            this.btnStop.UseVisualStyleBackColor = true;
+            this.btnStop.Click += new System.EventHandler(this.btnStop_Click);
             // 
             // btnAllReset
             // 
@@ -440,15 +463,15 @@ namespace TheChessBoard
             this.btnAllReset.UseVisualStyleBackColor = true;
             this.btnAllReset.Click += new System.EventHandler(this.btnAllReset_Click);
             // 
-            // btnModeConfirm
+            // btnStart
             // 
-            this.btnModeConfirm.Location = new System.Drawing.Point(12, 126);
-            this.btnModeConfirm.Name = "btnModeConfirm";
-            this.btnModeConfirm.Size = new System.Drawing.Size(70, 30);
-            this.btnModeConfirm.TabIndex = 4;
-            this.btnModeConfirm.Text = "开始(&S)";
-            this.btnModeConfirm.UseVisualStyleBackColor = true;
-            this.btnModeConfirm.Click += new System.EventHandler(this.btnModeConfirm_Click);
+            this.btnStart.Location = new System.Drawing.Point(12, 126);
+            this.btnStart.Name = "btnStart";
+            this.btnStart.Size = new System.Drawing.Size(70, 30);
+            this.btnStart.TabIndex = 4;
+            this.btnStart.Text = "开始(&S)";
+            this.btnStart.UseVisualStyleBackColor = true;
+            this.btnStart.Click += new System.EventHandler(this.btnModeConfirm_Click);
             // 
             // pnlBlackMode
             // 
@@ -605,19 +628,19 @@ namespace TheChessBoard
             this.smiQuote});
             this.cmsAbout.Name = "cmsAbout";
             this.cmsAbout.RenderMode = System.Windows.Forms.ToolStripRenderMode.System;
-            this.cmsAbout.Size = new System.Drawing.Size(211, 110);
+            this.cmsAbout.Size = new System.Drawing.Size(121, 82);
             // 
             // smiSettings
             // 
             this.smiSettings.Name = "smiSettings";
-            this.smiSettings.Size = new System.Drawing.Size(210, 24);
+            this.smiSettings.Size = new System.Drawing.Size(120, 24);
             this.smiSettings.Text = "选项...";
             this.smiSettings.Click += new System.EventHandler(this.smiSettings_Click);
             // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(207, 6);
+            this.toolStripSeparator1.Size = new System.Drawing.Size(117, 6);
             // 
             // smiAbout
             // 
@@ -659,7 +682,7 @@ namespace TheChessBoard
             this.MaximizeBox = false;
             this.Name = "TheChessBoard";
             this.Text = "The Chess Board";
-            this.Load += new System.EventHandler(this.PrimitiveBoard_Load);
+            this.Load += new System.EventHandler(this.TheChessBoard_Load);
             this.groupBox1.ResumeLayout(false);
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
@@ -718,7 +741,7 @@ namespace TheChessBoard
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.RadioButton rdbWhiteAuto;
         private System.Windows.Forms.RadioButton rdbWhiteManual;
-        private System.Windows.Forms.Button btnModeConfirm;
+        private System.Windows.Forms.Button btnStart;
         private System.Windows.Forms.Panel pnlBlackMode;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.RadioButton rdbBlackAuto;
@@ -734,12 +757,14 @@ namespace TheChessBoard
         private System.Windows.Forms.GroupBox groupBox7;
         private System.Windows.Forms.RichTextBox rtbLog;
         private System.Windows.Forms.Label lblBlackWatch;
-        private System.Windows.Forms.Button btnPauseCont;
+        private System.Windows.Forms.Button btnStop;
         private System.Windows.Forms.Button btnAbout;
         private System.Windows.Forms.ContextMenuStrip cmsAbout;
         private System.Windows.Forms.ToolStripMenuItem smiAbout;
         private System.Windows.Forms.ToolStripMenuItem smiQuote;
         private System.Windows.Forms.ToolStripMenuItem smiSettings;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
+        private System.Windows.Forms.Label lblBlackCaptured;
+        private System.Windows.Forms.Label lblWhiteCaptured;
     }
 }

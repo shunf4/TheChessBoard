@@ -106,5 +106,31 @@ namespace TheChessBoard.Properties {
                 this["HideAIWindow"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("<?xml version=\"1.0\" encoding=\"utf-16\"?>\r\n<ArrayOfString xmlns:xsi=\"http://www.w3." +
+            "org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" />")]
+        public global::System.Collections.Specialized.StringCollection AIExecPathHistory {
+            get {
+                return ((global::System.Collections.Specialized.StringCollection)(this["AIExecPathHistory"]));
+            }
+            set {
+                this["AIExecPathHistory"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("<?xml version=\"1.0\" encoding=\"utf-16\"?>\r\n<ArrayOfString xmlns:xsi=\"http://www.w3." +
+            "org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" />")]
+        public global::System.Collections.Specialized.StringCollection AIExecArgumentsHistory {
+            get {
+                return ((global::System.Collections.Specialized.StringCollection)(this["AIExecArgumentsHistory"]));
+            }
+            set {
+                this["AIExecArgumentsHistory"] = value;
+            }
+        }
     }
 }
