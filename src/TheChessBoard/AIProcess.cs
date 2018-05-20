@@ -104,6 +104,7 @@ namespace TheChessBoard
                 // 主程序开启了 AllowOutputAndWait 之后，解除 AllowOutputAndWait 中的阻塞。（所以，要不就是主程序等进程，要不就是进程等主程序。两个阻塞不可能同时发生，一个阻塞开始前必然解除另一个阻塞）
                 outputWaitHandle.Set();
                 // 因为进程还有可能继续给出输出，所以解除了之后要重新锁上
+                
                 allowMoveHandle.Reset();
                 if (proc.HasExited)
                 {
@@ -177,6 +178,7 @@ namespace TheChessBoard
             allowMoveHandle.Set();
             // 等待输出处给 outputWaitHandle 解除阻塞（表示终于接收到了输入），能等待 600000 毫秒（10分钟）
             outputWaitHandle.WaitOne(600000);
+            outputWaitHandle.Reset();
             // 秒表停止
             Watch.Stop();
         }

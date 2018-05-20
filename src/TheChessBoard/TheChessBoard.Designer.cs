@@ -193,7 +193,7 @@ namespace TheChessBoard
             // 
             // lblBlackCaptured
             // 
-            this.lblBlackCaptured.Font = new System.Drawing.Font("Chess Leipzig", 10.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(2)));
+            this.lblBlackCaptured.Font = new System.Drawing.Font("Chess Leipzig", 13.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(2)));
             this.lblBlackCaptured.Location = new System.Drawing.Point(308, 559);
             this.lblBlackCaptured.Name = "lblBlackCaptured";
             this.lblBlackCaptured.Size = new System.Drawing.Size(256, 51);
@@ -203,7 +203,7 @@ namespace TheChessBoard
             // 
             // lblWhiteCaptured
             // 
-            this.lblWhiteCaptured.Font = new System.Drawing.Font("Chess Leipzig", 10.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(2)));
+            this.lblWhiteCaptured.Font = new System.Drawing.Font("Chess Leipzig", 13.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(2)));
             this.lblWhiteCaptured.Location = new System.Drawing.Point(5, 559);
             this.lblWhiteCaptured.Name = "lblWhiteCaptured";
             this.lblWhiteCaptured.Size = new System.Drawing.Size(256, 51);

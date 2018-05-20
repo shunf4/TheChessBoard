@@ -76,5 +76,12 @@ namespace TheChessBoard
                 txbExecArguments.SelectedText = '"' + dialog.FileName + '"';
             }
         }
+
+        private void btnClearHistory_Click(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.AIExecPathHistory.Clear();
+            Properties.Settings.Default.AIExecArgumentsHistory.Clear();
+            MessageBox.Show("清除成功。", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
     }
 }

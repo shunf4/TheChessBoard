@@ -1017,7 +1017,7 @@ namespace TheChessBoard
         /// <returns></returns>
         public MoveType ManualMove(Move move, bool alreadyValidated, out Piece captured)
         {
-            ControlStatus = ChessBoardGameControlState.Idle;
+            SetControlStatus(ChessBoardGameControlState.Idle, updateImportant: true);
             MoveType moveType = ApplyMove(move, alreadyValidated, out captured);
             Trace.TraceInformation((move.Player == Player.White ? "白方" : "黑方") + "手动走子：" + Game.Moves.Last().SANString);
 
@@ -1037,7 +1037,7 @@ namespace TheChessBoard
         /// <returns></returns>
         public MoveType ManualMove(string moveInStr, Player player, out Piece captured)
         {
-            ControlStatus = ChessBoardGameControlState.Idle;
+            SetControlStatus(ChessBoardGameControlState.Idle, updateImportant: true);
             Trace.TraceInformation((player == Player.White ? "白方" : "黑方") + "输入 SAN 走子：" + moveInStr);
 
             MoveType moveType = ParseAndApplyMove(moveInStr, player, out captured);

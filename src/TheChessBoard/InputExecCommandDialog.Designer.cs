@@ -37,6 +37,8 @@ namespace TheChessBoard
             this.txbFileDialogExec = new System.Windows.Forms.Button();
             this.pnlMain = new System.Windows.Forms.Panel();
             this.txbFileDialogExecArg = new System.Windows.Forms.Button();
+            this.label1 = new System.Windows.Forms.Label();
+            this.btnClearHistory = new System.Windows.Forms.Button();
             this.pnlMain.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -76,7 +78,7 @@ namespace TheChessBoard
             // 
             // btnConfirm
             // 
-            this.btnConfirm.Location = new System.Drawing.Point(656, 142);
+            this.btnConfirm.Location = new System.Drawing.Point(656, 187);
             this.btnConfirm.Name = "btnConfirm";
             this.btnConfirm.Size = new System.Drawing.Size(87, 33);
             this.btnConfirm.TabIndex = 4;
@@ -87,7 +89,7 @@ namespace TheChessBoard
             // btnCancel
             // 
             this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnCancel.Location = new System.Drawing.Point(761, 142);
+            this.btnCancel.Location = new System.Drawing.Point(761, 187);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(87, 33);
             this.btnCancel.TabIndex = 5;
@@ -108,6 +110,8 @@ namespace TheChessBoard
             // pnlMain
             // 
             this.pnlMain.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.pnlMain.Controls.Add(this.btnClearHistory);
+            this.pnlMain.Controls.Add(this.label1);
             this.pnlMain.Controls.Add(this.txbFileDialogExecArg);
             this.pnlMain.Controls.Add(this.txbFileDialogExec);
             this.pnlMain.Controls.Add(this.txbExecPath);
@@ -116,7 +120,7 @@ namespace TheChessBoard
             this.pnlMain.Controls.Add(this.lblExecPathCaption);
             this.pnlMain.Location = new System.Drawing.Point(0, 0);
             this.pnlMain.Name = "pnlMain";
-            this.pnlMain.Size = new System.Drawing.Size(875, 128);
+            this.pnlMain.Size = new System.Drawing.Size(875, 172);
             this.pnlMain.TabIndex = 7;
             // 
             // txbFileDialogExecArg
@@ -129,13 +133,32 @@ namespace TheChessBoard
             this.txbFileDialogExecArg.UseVisualStyleBackColor = true;
             this.txbFileDialogExecArg.Click += new System.EventHandler(this.txbFileDialogExecArg_Click);
             // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(31, 131);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(384, 20);
+            this.label1.TabIndex = 8;
+            this.label1.Text = "注：运行的工作目录是 TheChessBoard.exe 所在目录。";
+            // 
+            // btnClearHistory
+            // 
+            this.btnClearHistory.Location = new System.Drawing.Point(730, 126);
+            this.btnClearHistory.Name = "btnClearHistory";
+            this.btnClearHistory.Size = new System.Drawing.Size(118, 30);
+            this.btnClearHistory.TabIndex = 9;
+            this.btnClearHistory.Text = "清除历史记录";
+            this.btnClearHistory.UseVisualStyleBackColor = true;
+            this.btnClearHistory.Click += new System.EventHandler(this.btnClearHistory_Click);
+            // 
             // InputExecCommandDialog
             // 
             this.AcceptButton = this.btnConfirm;
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.btnCancel;
-            this.ClientSize = new System.Drawing.Size(876, 189);
+            this.ClientSize = new System.Drawing.Size(876, 232);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnConfirm);
             this.Controls.Add(this.pnlMain);
@@ -162,5 +185,7 @@ namespace TheChessBoard
         public System.Windows.Forms.ComboBox txbExecArguments;
         private System.Windows.Forms.Panel pnlMain;
         private System.Windows.Forms.Button txbFileDialogExecArg;
+        private System.Windows.Forms.Button btnClearHistory;
+        private System.Windows.Forms.Label label1;
     }
 }

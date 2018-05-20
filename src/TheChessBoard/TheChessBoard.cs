@@ -788,7 +788,7 @@ namespace TheChessBoard
         {
             GameFormLogic.CareWhoseTurnItIs = !ckbDontCareWhoseTurnItIs.Checked;
             SetControlsEnabledAccordingToWhoseTurnAndStatus();
-            GameFormLogic.ControlStatus = ChessBoardGameControlState.Idle;
+            GameFormLogic.SetControlStatus(ChessBoardGameControlState.Idle, updateImportant: true);
         }
 
         private void label1_Click(object sender, EventArgs e)
@@ -901,7 +901,7 @@ namespace TheChessBoard
                 bool moveSelect = DestinationMoves.ContainsKey(clickedButton) && allowMoveSelect;
                 if (cancelSelect)
                 {
-                    GameFormLogic.ControlStatus = ChessBoardGameControlState.Idle;
+                    GameFormLogic.SetControlStatus(ChessBoardGameControlState.Idle, updateImportant: true);
                 }
 
                 if (moveSelect)
@@ -967,7 +967,7 @@ namespace TheChessBoard
                 else
                 {
                     // 当不走子、不取消时，只能让控件状态回到“闲置。”
-                    GameFormLogic.ControlStatus = ChessBoardGameControlState.Idle;
+                    GameFormLogic.SetControlStatus(ChessBoardGameControlState.Idle, updateImportant: true);
                 }
             }
             return false;
@@ -1225,7 +1225,8 @@ namespace TheChessBoard
         {
             if (GameFormLogic.ControlStatus == ChessBoardGameControlState.Idle || GameFormLogic.ControlStatus == ChessBoardGameControlState.NotStarted || GameFormLogic.ControlStatus == ChessBoardGameControlState.StdIORunning || GameFormLogic.ControlStatus == ChessBoardGameControlState.Stopped)
             {
-                SquareCancelSelect();
+                if (e.UpdateImportant)
+                    SquareCancelSelect();
             }
 
             if (GameFormLogic.ControlStatus == ChessBoardGameControlState.Idle || GameFormLogic.ControlStatus == ChessBoardGameControlState.Selected)
