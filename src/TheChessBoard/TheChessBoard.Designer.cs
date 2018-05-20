@@ -335,7 +335,6 @@ namespace TheChessBoard
             this.lblWhiteStatusText.Size = new System.Drawing.Size(54, 20);
             this.lblWhiteStatusText.TabIndex = 23;
             this.lblWhiteStatusText.Text = "无状态";
-            this.lblWhiteStatusText.Click += new System.EventHandler(this.label2_Click);
             // 
             // lblWhiteStatusCaption
             // 
@@ -384,7 +383,6 @@ namespace TheChessBoard
             this.lblFormStatusCaption.Size = new System.Drawing.Size(39, 20);
             this.lblFormStatusCaption.TabIndex = 22;
             this.lblFormStatusCaption.Text = "局面";
-            this.lblFormStatusCaption.Click += new System.EventHandler(this.lblFormStatusCaption_Click);
             // 
             // lblFormStatus
             // 
@@ -503,7 +501,6 @@ namespace TheChessBoard
             this.pnlWhiteMode.Name = "pnlWhiteMode";
             this.pnlWhiteMode.Size = new System.Drawing.Size(125, 90);
             this.pnlWhiteMode.TabIndex = 0;
-            this.pnlWhiteMode.Paint += new System.Windows.Forms.PaintEventHandler(this.panel6_Paint);
             // 
             // label3
             // 

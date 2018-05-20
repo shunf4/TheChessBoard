@@ -116,6 +116,9 @@ namespace TheChessBoard
         Requesting,
     }
 
+    /// <summary>
+    /// AI 的类型，白或黑。
+    /// </summary>
     public enum StdIOType
     {
         White,
@@ -391,10 +394,13 @@ namespace TheChessBoard
             {
                 try
                 {
-                    foreach (var m in _allThreadsDoneLocks)
+                    lock (_allThreadsDoneLocks)
                     {
-                        // 逐个等待进程结束
-                        m?.WaitOne(1000);
+                        foreach (var m in _allThreadsDoneLocks)
+                        {
+                            // 逐个等待进程结束
+                            m?.WaitOne(1000);
+                        }
                     }
                 }
                 catch (InvalidOperationException e)
@@ -428,12 +434,22 @@ namespace TheChessBoard
             _updateWatchLoopLock.Set();
 
             Thread.Sleep(200);
+
             if (_allThreadsDoneLocks.Count > 0)
-            //WaitHandle.WaitAll(_allThreadsDoneLocks.Where((m)=>m!=null).ToArray(), 1000);   //Time
             {
-                foreach (var m in _allThreadsDoneLocks)
+                try
                 {
-                    m?.WaitOne(1000);
+                    lock (_allThreadsDoneLocks)
+                    {
+                        foreach (var m in _allThreadsDoneLocks)
+                        {
+                            m?.WaitOne(1000);
+                        }
+                    }
+                }
+                catch (InvalidOperationException e)
+                {
+                    Trace.TraceError("清理进程错误：" + e.Message + Environment.NewLine + e.StackTrace);
                 }
             }
 
@@ -528,10 +544,6 @@ namespace TheChessBoard
         /// 当窗体控件状态改变过后，需要触发的事件。
         /// </summary>
         public event GameControlStatusUpdatedEventHandler GameControlStatusUpdated;
-        /// <summary>
-        /// 当将一个走子应用到棋盘上后，需要触发的事件。
-        /// </summary>
-        public event AppliedMoveEventHandler AppliedMove;
         /// <summary>
         /// 当有一方 AI 的状态发生改变时，需要触发的事件。
         /// </summary>
@@ -677,7 +689,11 @@ namespace TheChessBoard
             }
 
             mre.Set();
-            _allThreadsDoneLocks.Remove(mre);
+            try { _allThreadsDoneLocks.Remove(mre); }
+            catch (Exception e)
+            {
+                Trace.TraceError("向 _allThreadsDoneLocks 移除锁错误：" + e.Message + Environment.NewLine + e.StackTrace);
+            }
         }
 
         #endregion
@@ -767,189 +783,9 @@ namespace TheChessBoard
         }
         #endregion
 
-        #region 和ChessGame有关的成员
-        /// <summary>
-        /// 实现象棋规则的 ChessGame 成员。
-        /// </summary>
-        public ChessGame Game;
+        #region 和象棋的规则、走子动作有关的成员。
 
-        public bool CareWhoseTurnItIs
-        {
-            get
-            {
-                return Game.careWhoseTurnItIs;
-            }
-            set
-            {
-                Game.careWhoseTurnItIs = value;
-                NotifyPropertyChanged();
-            }
-        }
-
-        public Player WhoseTurn
-        {
-            get
-            {
-                return Game.WhoseTurn;
-            }
-        }
-
-        /// <summary>
-        /// 将 Game 里的棋盘状态转成六十四个字符组成的数组，和 Form 中的棋盘字符相关。
-        /// </summary>
-        public char[] BoardPrint
-        {
-            get
-            {
-                Piece[][] gameBoard = Game.GetBoard();
-                char[] boardPrint = new char[64];
-                for (int r = 0; r < gameBoard.Length; r++)
-                {
-                    for (int j = 0; j < gameBoard[0].Length; j++)
-                    {
-                        Piece piece = gameBoard[r][j];
-
-                        char charOnBoard;
-                        SquareColor sc = ((r + j) % 2 == 1) ? SquareColor.SquareBlack : SquareColor.SquareWhite;
-                        if (piece == null)
-                        {
-                            // 在那个字体里， + 是黑方块，空格是白方块。
-                            charOnBoard = (sc == SquareColor.SquareBlack) ? '+' : ' ';
-                        }
-                        else
-                        {
-                            var thisTuple = Tuple.Create(piece.GetFenCharacter(), sc);
-                            charOnBoard = fenAndSquareColorMappings[thisTuple];
-                        }
-                        boardPrint[r * 8 + j] = charOnBoard;
-                    }
-
-                }
-                return boardPrint;
-            }
-        }
-
-        public MoveType ParseAndApplyMove(string moveInStr, Player player, out Piece captured, bool manual = false)
-        {
-            Move move = PgnMoveReader.ParseMove(moveInStr, player, Game);
-            var moveResult = ApplyMove(move, false, out captured, manual);
-            if (moveResult == MoveType.Invalid)
-                throw new PgnException("Move Invalid.");
-            return moveResult;
-        }
-
-        public void InvokeNextMoveRequest(Player whoseTurn, ManualResetEvent uiLock)
-        {
-            if (ProcedureStatus == ChessBoardGameProcedureState.Running)
-            {
-                if ((Mode == GameMode.BothAuto || Mode == GameMode.WhiteAuto) && (whoseTurn == Player.White))
-                {
-                    new Thread(ThreadInvokeNextMoveRequestHelper).Start(new InvokeNextMoveRequestArgs
-                    {
-                        StdIOType = StdIOType.White,
-                        UILock = uiLock
-                    });
-                }
-                if ((Mode == GameMode.BothAuto || Mode == GameMode.BlackAuto) && (whoseTurn == Player.Black))
-                {
-                    new Thread(ThreadInvokeNextMoveRequestHelper).Start(new InvokeNextMoveRequestArgs
-                    {
-                        StdIOType = StdIOType.Black,
-                        UILock = uiLock
-                    });
-                }
-            }
-        }
-
-        public MoveType ManualMove(Move move, bool alreadyValidated, out Piece captured)
-        {
-            SetControlStatus(ChessBoardGameControlState.Idle, updateImportant: false);  //To clean squares
-            MoveType moveType = ApplyMove(move, alreadyValidated, out captured, manual: true);
-            
-            if (move.Player == Player.White)
-                HasWhiteManuallyMoved = true;
-            else
-                HasBlackManuallyMoved = true;
-            return moveType;
-        }
-
-        public MoveType ManualMove(string moveInStr, Player player, out Piece captured)
-        {
-            SetControlStatus(ChessBoardGameControlState.Idle, updateImportant: false);  //To clean squares
-            MoveType moveType = ParseAndApplyMove(moveInStr, player, out captured, manual: true);
-            if (player == Player.White)
-                HasWhiteManuallyMoved = true;
-            else
-                HasBlackManuallyMoved = true;
-            return moveType;
-        }
-
-        public MoveType ApplyMove(Move move, bool alreadyValidated, out Piece captured, bool manual = false)
-        {
-            var moveResult = Game.ApplyMove(move, alreadyValidated, out captured);
-            var boardPrintBackup = BoardPrint;
-
-            if (moveResult == MoveType.Invalid)
-                throw new ArgumentException("Move Invalid.");
-
-            var _updateUIDoneAfterMoveLock = new ManualResetEvent(false);
-            _updateUIDoneAfterMoveLocks.Add(_updateUIDoneAfterMoveLock);
-
-            if(manual)
-                Trace.TraceInformation((move.Player == Player.White ? "白方" : "黑方") + "手动走子：" + Game.Moves.Last().SANString);
-            NotifyPropertyChanged(new String[] { "WhoseTurn", "GameMoves" }, _updateUIDoneAfterMoveLock);
-
-            if (Game.Moves.Last().StoredSANString == null)
-            {
-                throw new ArgumentException("SAN Not Generated");
-            }
-
-            if (ProcedureStatus == ChessBoardGameProcedureState.NotStarted)
-                return moveResult;
-
-            SetControlStatus(ChessBoardGameControlState.Idle, true);
-            if (FormInvoke != null)
-                FormInvoke(new Action(() => 
-                {
-                    GameMoves.Add(new MoreDetailedMoveImitator(Game.Moves.Count, Game.Moves.Last(), boardPrintBackup));
-                    AppliedMove?.Invoke();
-                }));
-            else
-            {
-                GameMoves.Add(new MoreDetailedMoveImitator(Game.Moves.Count, Game.Moves.Last(), boardPrintBackup));
-                AppliedMove?.Invoke();
-            }
-
-            UpdateProcedureStatusIfGameEnds();
-
-            if (move.Player == Player.White)
-            {
-                if (BlackStatus == StdIOState.NotRequesting && !(HasBlackManuallyMoved))
-                {
-                    Trace.TraceInformation("向黑 AI 发送：" + Game.Moves.Last().SANString);
-                    BlackAIProcess.WriteLine(Game.Moves.Last().StoredSANString);
-                }
-            }
-            else
-            {
-                if (WhiteStatus == StdIOState.NotRequesting && !(HasWhiteManuallyMoved))
-                {
-                    Trace.TraceInformation("向白 AI 发送：" + Game.Moves.Last().SANString);
-                    WhiteAIProcess?.WriteLine(Game.Moves.Last().StoredSANString);
-                }
-            }
-
-            InvokeNextMoveRequest(ChessUtilities.GetOpponentOf(move.Player), _updateUIDoneAfterMoveLock);
-            return moveResult;
-        }
-
-        public BindingList<MoreDetailedMoveImitator> GameMoves
-        {
-            get;
-            private set;
-        }
-
-#region 棋子定义
+        #region 一些默认的值的定义
         private static readonly Dictionary<char, Piece> FenMappings = new Dictionary<char, Piece>()
         {
             { 'K', new King(Player.White) },
@@ -1014,7 +850,7 @@ namespace TheChessBoard
         static readonly Piece pw = FenMappings['P'];
         static readonly Piece pb = FenMappings['p'];
         static readonly Piece o = null;
-#endregion
+
 
         private static GameCreationData _defaultGameCreationData = new GameCreationData
         {
@@ -1039,18 +875,256 @@ namespace TheChessBoard
             CanBlackCastleQueenSide = true,
             EnPassant = null
         };
-#endregion
 
-#region 和两个AI进程有关的方法
+        #endregion
+        /// <summary>
+        /// 实现象棋规则的 ChessGame 成员。
+        /// </summary>
+        public ChessGame Game;
+
+        /// <summary>
+        /// 记录表项化的 MoreDetailedMove 的历史走子列表。
+        /// </summary>
+        public BindingList<MoreDetailedMoveImitator> GameMoves
+        {
+            get;
+            private set;
+        }
+
+        public bool CareWhoseTurnItIs
+        {
+            get
+            {
+                return Game.careWhoseTurnItIs;
+            }
+            set
+            {
+                Game.careWhoseTurnItIs = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        public Player WhoseTurn
+        {
+            get
+            {
+                return Game.WhoseTurn;
+            }
+        }
+
+        /// <summary>
+        /// 将 Game 里的棋盘状态转成六十四个字符组成的数组，以便用特定的象棋字体显示这些字符，和 Form 中的棋盘字符相关。
+        /// </summary>
+        public char[] BoardPrint
+        {
+            get
+            {
+                Piece[][] gameBoard = Game.GetBoard();
+                char[] boardPrint = new char[64];
+                for (int r = 0; r < gameBoard.Length; r++)
+                {
+                    for (int j = 0; j < gameBoard[0].Length; j++)
+                    {
+                        Piece piece = gameBoard[r][j];
+
+                        char charOnBoard;
+                        SquareColor sc = ((r + j) % 2 == 1) ? SquareColor.SquareBlack : SquareColor.SquareWhite;
+                        if (piece == null)
+                        {
+                            // 在那个字体里， + 是黑方块，空格是白方块。
+                            charOnBoard = (sc == SquareColor.SquareBlack) ? '+' : ' ';
+                        }
+                        else
+                        {
+                            var thisTuple = Tuple.Create(piece.GetFenCharacter(), sc);
+                            // fenAndSquareColorMappings 将 (棋子的记谱法字符, 棋盘格颜色) 这个二元组转换为可以用象棋字体显示的字符。
+                            charOnBoard = fenAndSquareColorMappings[thisTuple];
+                        }
+                        boardPrint[r * 8 + j] = charOnBoard;
+                    }
+
+                }
+                return boardPrint;
+            }
+        }
+
+        /// <summary>
+        /// 分析 moveInStr 中的标准记谱法（SAN）字符串，产生一个 Move，并对 ChessGame 应用这个 Move。
+        /// </summary>
+        /// <param name="moveInStr">存有标准代数记谱法的字符串。</param>
+        /// <param name="player">行动方 Player。</param>
+        /// <param name="captured">传出参数，当有吃子时给 captured 赋值。</param>
+        /// <returns></returns>
+        public MoveType ParseAndApplyMove(string moveInStr, Player player, out Piece captured)
+        {
+            Move move = PgnMoveReader.ParseMove(moveInStr, player, Game);
+            var moveResult = ApplyMove(move, false, out captured);
+            return moveResult;
+        }
+
+        /// <summary>
+        /// 点击窗体中的棋盘格子所触发的走子，就会用这个 ManualMove 来处理。
+        /// </summary>
+        /// <param name="move">用户点击走子所构造的一个 Move。</param>
+        /// <param name="alreadyValidated">这个 Move 是否已经被检查过是合法的。</param>
+        /// <param name="captured">传出参数，当有吃子时给 captured 赋值。</param>
+        /// <returns></returns>
+        public MoveType ManualMove(Move move, bool alreadyValidated, out Piece captured)
+        {
+            MoveType moveType = ApplyMove(move, alreadyValidated, out captured);
+            Trace.TraceInformation((move.Player == Player.White ? "白方" : "黑方") + "手动走子：" + Game.Moves.Last().SANString);
+
+            if (move.Player == Player.White)
+                HasWhiteManuallyMoved = true;
+            else
+                HasBlackManuallyMoved = true;
+            return moveType;
+        }
+
+        /// <summary>
+        /// 用户在窗体中手动输入的 SAN，会用这个 ManualMove 来处理。 
+        /// </summary>
+        /// <param name="moveInStr">窗体中手动输入的 SAN 字符串。</param>
+        /// <param name="player">行动方 Player。</param>
+        /// <param name="captured">传出参数，当有吃子时给 captured 赋值。</param>
+        /// <returns></returns>
+        public MoveType ManualMove(string moveInStr, Player player, out Piece captured)
+        {
+            Trace.TraceInformation((player == Player.White ? "白方" : "黑方") + "输入 SAN 走子：" + moveInStr);
+
+            MoveType moveType = ParseAndApplyMove(moveInStr, player, out captured);
+            if (player == Player.White)
+                HasWhiteManuallyMoved = true;
+            else
+                HasBlackManuallyMoved = true;
+            return moveType;
+        }
+
+        /// <summary>
+        /// 较为重要的一个方法：对这盘游戏应用一个走子 Move。
+        /// </summary>
+        /// <param name="move">要应用的走子 Move。</param>
+        /// <param name="alreadyValidated">这个走子是否已经验证过合法。</param>
+        /// <param name="captured">传出参数，当有吃子时给 captured 赋值。</param>
+        /// <returns></returns>
+        public MoveType ApplyMove(Move move, bool alreadyValidated, out Piece captured)
+        {
+            // 对内部的象棋规则对象 Game 应用这个走子。
+            var moveResult = Game.ApplyMove(move, alreadyValidated, out captured);
+
+            if (moveResult == MoveType.Invalid)
+                throw new ArgumentException("Move Invalid.");
+
+            // 将走子后的 BoardPrint 保存下来，方便之后增加一条 MoreDetailedMove 的表项。
+            var boardPrintBackup = BoardPrint;
+
+            // 增加一条 MoreDetailedMove 的表项。注意，由于 GameMoves 是绑定到主窗口中的历史走子控件的，所以要用 FormInvoke 来保证线程安全。
+            if (FormInvoke != null)
+                FormInvoke(new Action(() =>
+                {
+                    GameMoves.Add(new MoreDetailedMoveImitator(Game.Moves.Count, Game.Moves.Last(), boardPrintBackup));
+                }));
+            else
+            {
+                GameMoves.Add(new MoreDetailedMoveImitator(Game.Moves.Count, Game.Moves.Last(), boardPrintBackup));
+            }
+            
+
+            // 增加一个 UI 更新等待阻塞锁。
+            var _updateUIDoneAfterMoveLock = new ManualResetEvent(false);
+            _updateUIDoneAfterMoveLocks.Add(_updateUIDoneAfterMoveLock);
+
+            // 触发 WhoseTurn（行动方）的属性更新事件，UI 就会更新，之后释放锁。
+            NotifyPropertyChanged(new String[] { "WhoseTurn", "GameMoves" }, _updateUIDoneAfterMoveLock);
+
+            if (Game.Moves.Last().StoredSANString == null)
+            {
+                throw new ArgumentException("SAN Not Generated");
+            }
+
+            // 如果过程中途遭到“重置”、“停止”的中断，那么这里 ProcedureStatus 会复位到 NotStarted，此时不应继续执行。
+            if (ProcedureStatus == ChessBoardGameProcedureState.NotStarted)
+                return moveResult;
+
+            // 检查一下游戏是否符合结束条件
+            UpdateProcedureStatusIfGameEnds();
+
+            if (move.Player == Player.White)
+            {
+                if (BlackStatus == StdIOState.NotRequesting && !(HasBlackManuallyMoved))
+                {
+                    Trace.TraceInformation("向黑 AI 发送：" + Game.Moves.Last().SANString);
+                    BlackAIProcess.WriteLine(Game.Moves.Last().StoredSANString);
+                }
+            }
+            else
+            {
+                if (WhiteStatus == StdIOState.NotRequesting && !(HasWhiteManuallyMoved))
+                {
+                    Trace.TraceInformation("向白 AI 发送：" + Game.Moves.Last().SANString);
+                    WhiteAIProcess?.WriteLine(Game.Moves.Last().StoredSANString);
+                }
+            }
+
+            // 如果有自动方的话，触发下一个走子请求。
+            InvokeNextMoveRequest(ChessUtilities.GetOpponentOf(move.Player), _updateUIDoneAfterMoveLock);
+            return moveResult;
+        }
+
+        /// <summary>
+        /// 触发下一个走子请求。
+        /// </summary>
+        /// <param name="whoseTurn">走子行动方。</param>
+        /// <param name="uiLock">UI 等待锁，这个锁没放行就不能接受下一个走子请求。</param>
+        public void InvokeNextMoveRequest(Player whoseTurn, ManualResetEvent uiLock)
+        {
+            if (ProcedureStatus == ChessBoardGameProcedureState.Running)
+            {
+                if ((Mode == GameMode.BothAuto || Mode == GameMode.WhiteAuto) && (whoseTurn == Player.White))
+                {
+                    new Thread(ThreadInvokeNextMoveRequestHelper).Start(new InvokeNextMoveRequestArgs
+                    {
+                        StdIOType = StdIOType.White,
+                        UILock = uiLock
+                    });
+                }
+                if ((Mode == GameMode.BothAuto || Mode == GameMode.BlackAuto) && (whoseTurn == Player.Black))
+                {
+                    new Thread(ThreadInvokeNextMoveRequestHelper).Start(new InvokeNextMoveRequestArgs
+                    {
+                        StdIOType = StdIOType.Black,
+                        UILock = uiLock
+                    });
+                }
+            }
+        }
+
+        #endregion
+
+        #region 和两个AI进程有关的方法
+
+        /// <summary>
+        /// 要传递给白 AI Process 的 LineProcessor，处理接收到的一行 SAN 字符串。
+        /// </summary>
+        /// <param name="sanString"></param>
         private void _whiteLineProcess(string sanString)
         {
+            // 指示这个字符串是否存在错误。
             bool error = false;
 
+            // 放行秒表更新锁，秒表不再更新。
             _updateWatchLoopLock.Set();
+
+            // 有可能在这个线程运行过程中遭到“重置”或者“终止”，这个时候不应继续运行。
             if (ProcedureStatus != ChessBoardGameProcedureState.Running)
                 return;
+
+            // 线程等待锁 mre。
             var mre = new ManualResetEvent(false);
             _allThreadsDoneLocks.Add(mre);
+
+            NotifyPropertyChanged("WhiteStopwatchTime");
+
             Trace.TraceInformation("白 AI 已输出：" + sanString);
             try
             {
@@ -1066,12 +1140,13 @@ namespace TheChessBoard
                 error = true;
             }
 
-            NotifyPropertyChanged("WhiteStopwatchTime");
+            // 有可能在这个线程运行过程中遭到“重置”或者“终止”，这个时候不应继续运行。
             if (ProcedureStatus == ChessBoardGameProcedureState.NotStarted) //Killed
                 return;
 
             if (error)
             {
+                // 发送“重新走子”信号。
                 WhiteAIProcess.WriteLine(".");
                 ProcessAllowOutputAndWait(StdIOType.White);
                 Trace.TraceWarning(@"向白 AI 发送：\b 重走\b0 ");
@@ -1096,15 +1171,28 @@ namespace TheChessBoard
 
         }
 
+        /// <summary>
+        /// 要传递给黑 AI Process 的 LineProcessor，处理接收到的一行 SAN 字符串。
+        /// </summary>
+        /// <param name="sanString"></param>
         private void _blackLineProcess(string sanString)
         {
+            // 指示这个字符串是否存在错误。
             bool error = false;
 
+            // 放行秒表更新锁，秒表不再更新。
             _updateWatchLoopLock.Set();
+
+            // 有可能在这个线程运行过程中遭到“重置”或者“终止”，这个时候不应继续运行。
             if (ProcedureStatus != ChessBoardGameProcedureState.Running)
                 return;
+
+            // 线程等待锁 mre。
             var mre = new ManualResetEvent(false);
             _allThreadsDoneLocks.Add(mre);
+
+            NotifyPropertyChanged("BlackStopwatchTime");
+
             Trace.TraceInformation("黑 AI 已输出：" + sanString);
             try
             {
@@ -1119,11 +1207,14 @@ namespace TheChessBoard
                 Trace.TraceError("黑方 AI 的输出 [" + sanString + "] 存在错误：" + Environment.NewLine + e.Message.Replace(@"\", @"\\") + Environment.NewLine + "将请求重新走子。");
                 error = true;
             }
-            NotifyPropertyChanged("BlackStopwatchTime");
-            if (ProcedureStatus == ChessBoardGameProcedureState.NotStarted) //Killed
+
+            // 有可能在这个线程运行过程中遭到“重置”或者“终止”，这个时候不应继续运行。
+            if (ProcedureStatus == ChessBoardGameProcedureState.NotStarted)
                 return;
+
             if (error)
             {
+                // 发送“重新走子”信号。
                 BlackAIProcess.WriteLine(".");
                 ProcessAllowOutputAndWait(StdIOType.Black);
                 Trace.TraceWarning(@"向黑 AI 发送：\b 重走\b0 ");
@@ -1134,6 +1225,7 @@ namespace TheChessBoard
                     Trace.TraceError("向 _allThreadsDoneLocks 移除锁错误：" + e.Message + Environment.NewLine + e.StackTrace);
                 }
             }
+
             BlackStatus = StdIOState.NotRequesting;
             mre.Set();
             try { _allThreadsDoneLocks.Remove(mre); }
@@ -1143,6 +1235,9 @@ namespace TheChessBoard
             }
         }
 
+        /// <summary>
+        /// 当白 AI 未知退出时，触发的事件。
+        /// </summary>
         private void _whiteProcessExited()
         {
             if(ProcedureStatus == ChessBoardGameProcedureState.Running && (Mode == GameMode.WhiteAuto || Mode == GameMode.BothAuto))
@@ -1154,6 +1249,9 @@ namespace TheChessBoard
             WhiteStatus = StdIOState.NotStarted;
         }
 
+        /// <summary>
+        /// 当黑 AI 未知退出时，触发的事件。
+        /// </summary>
         private void _blackProcessExited()
         {
             if (ProcedureStatus == ChessBoardGameProcedureState.Running && (Mode == GameMode.BlackAuto || Mode == GameMode.BothAuto))
@@ -1165,6 +1263,12 @@ namespace TheChessBoard
             BlackStatus = StdIOState.NotStarted;
         }
 
+        /// <summary>
+        /// 对 Player 加载 AI。
+        /// </summary>
+        /// <param name="player">要加载 AI 的 Player。</param>
+        /// <param name="execPath">可执行文件地址。</param>
+        /// <param name="execArguments">可执行文件参数。</param>
         public void LoadAIExec(Player player, string execPath, string execArguments)
         {
             try
@@ -1217,6 +1321,8 @@ namespace TheChessBoard
             public StdIOType StdIOType;
             public ManualResetEvent UILock;
         }
+
+        // 触发读取下一个走子的辅助函数，在 UI 锁和观棋锁均放行之后请求下一个走子。用于被新线程调用。
         void ThreadInvokeNextMoveRequestHelper(object obj)
         {
             if (ProcedureStatus != ChessBoardGameProcedureState.Running)
@@ -1225,12 +1331,14 @@ namespace TheChessBoard
             _allThreadsDoneLocks.Add(mre);
 
             var args = (InvokeNextMoveRequestArgs)(obj);
+            // 等待 UI 锁。
             if (args.UILock != null)
             {
                 args.UILock.WaitOne();
                 _updateUIDoneAfterMoveLocks.Remove(args.UILock);
             }
 
+            // 等待观棋锁。
             uint wt;
             if ((wt = Properties.Settings.Default.WatchChessTime) != 0)
             {
@@ -1239,6 +1347,7 @@ namespace TheChessBoard
                 watchChessLock.WaitOne((int)wt);
             }
 
+            // 请求下一个走子。
             ProcessAllowOutputAndWait(args.StdIOType);
             mre.Set();
             try
@@ -1251,6 +1360,10 @@ namespace TheChessBoard
             }
         }
 
+        /// <summary>
+        /// 请求下一个走子。
+        /// </summary>
+        /// <param name="type"></param>
         public void ProcessAllowOutputAndWait(StdIOType type)
         {
             ControlStatus = ChessBoardGameControlState.StdIORunning;

@@ -79,8 +79,6 @@ namespace TheChessBoard
             FormGame.GameControlStatusUpdated += FormGameControlStatusUpdatedSubscriber;
             FormGame.PlayerIOStatusUpdated -= FormGamePlayerIOStatusUpdatedSubscriber;
             FormGame.PlayerIOStatusUpdated += FormGamePlayerIOStatusUpdatedSubscriber;
-            FormGame.AppliedMove -= AfterApplyMove;
-            FormGame.AppliedMove += AfterApplyMove;
 
             lblWhiteWatch.DataBindings.Clear();
             lblWhiteWatch.DataBindings.Add("Text", FormGame, "WhiteStopwatchTime", false, DataSourceUpdateMode.OnPropertyChanged);
@@ -913,12 +911,6 @@ namespace TheChessBoard
         #endregion
 
         #region FormGame 引发事件触发的方法
-        private void AfterApplyMove()
-        {
-            dgvHistoryMoves.ClearSelection();
-            dgvHistoryMoves.Rows[dgvHistoryMoves.Rows.Count - 1].Selected = true;
-            dgvHistoryMoves.Refresh();
-        }
 
         private void RefreshHistoryMoveSourceReference()
         {
@@ -1021,7 +1013,6 @@ namespace TheChessBoard
         {
             if (FormGame.ControlStatus == ChessBoardGameControlState.Idle || FormGame.ControlStatus == ChessBoardGameControlState.NotStarted || FormGame.ControlStatus == ChessBoardGameControlState.StdIORunning || FormGame.ControlStatus == ChessBoardGameControlState.Stopped)
             {
-                // TODO : 可能需要提升效率
                 if(e.UpdateImportant == true)
                     SquareCancelSelect();
             }
@@ -1119,6 +1110,13 @@ namespace TheChessBoard
             if (e == null || e.PropertyName == "WhoseTurn")
             {
                 UpdateWhoseTurn();
+            }
+            if (e == null || e.PropertyName == "GameMoves")
+            {
+                dgvHistoryMoves.ClearSelection();
+                dgvHistoryMoves.Rows[dgvHistoryMoves.Rows.Count - 1].Selected = true;
+                dgvHistoryMoves.FirstDisplayedScrollingRowIndex = dgvHistoryMoves.Rows.Count - 1;
+                dgvHistoryMoves.Refresh();
             }
         }
 
@@ -1222,21 +1220,6 @@ namespace TheChessBoard
                 bs.BackColor = ButtonSquareColor;
         }
         #endregion
-
-        private void lblFormStatusCaption_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void panel6_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void label2_Click(object sender, EventArgs e)
-        {
-
-        }
 
         private void btnPauseCont_Click(object sender, EventArgs e)
         {

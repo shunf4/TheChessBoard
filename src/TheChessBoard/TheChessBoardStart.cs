@@ -15,8 +15,6 @@ namespace TheChessBoard
         [STAThread]
         static void Main()
         {
-            //FormGame.LoadAIFilenames(@"..\..\..\TestConsoleApp1\bin\Debug\TestConsoleApp1.exe", "", "", "");
-            
             Application.EnableVisualStyles();
             if (Environment.OSVersion.Version.Major >= 6) SetProcessDPIAware();
 
