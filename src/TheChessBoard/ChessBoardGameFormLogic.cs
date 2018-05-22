@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Windows.Forms;
 
+// TODO : 开局棋盘显示将死问题
 namespace TheChessBoard
 {
     /// <summary>
@@ -1200,7 +1201,7 @@ namespace TheChessBoard
             }
 
             // 有可能在这个线程运行过程中遭到“重置”或者“终止”，这个时候不应继续运行。
-            if (ProcedureStatus == ChessBoardGameProcedureState.NotStarted) //Killed
+            if (ProcedureStatus != ChessBoardGameProcedureState.Running)
                 return;
 
             if (error)
@@ -1221,13 +1222,14 @@ namespace TheChessBoard
             }
 
             WhiteStatus = StdIOState.NotRequesting;
+            SetControlStatus(ChessBoardGameControlState.Idle, updateImportant: false);
             mre.Set();
             try { _allThreadsDoneLocks.Remove(mre); }
             catch (Exception e)
             {
                 Trace.TraceError("向 _allThreadsDoneLocks 移除锁错误：" + e.Message + Environment.NewLine + e.StackTrace);
             }
-
+            return;
         }
 
         /// <summary>
@@ -1268,7 +1270,7 @@ namespace TheChessBoard
             }
 
             // 有可能在这个线程运行过程中遭到“重置”或者“终止”，这个时候不应继续运行。
-            if (ProcedureStatus == ChessBoardGameProcedureState.NotStarted)
+            if (ProcedureStatus != ChessBoardGameProcedureState.Running)
                 return;
 
             if (error)
@@ -1283,8 +1285,10 @@ namespace TheChessBoard
                 {
                     Trace.TraceError("向 _allThreadsDoneLocks 移除锁错误：" + e.Message + Environment.NewLine + e.StackTrace);
                 }
+                return;
             }
 
+            SetControlStatus(ChessBoardGameControlState.Idle, updateImportant: false);
             BlackStatus = StdIOState.NotRequesting;
             mre.Set();
             try { _allThreadsDoneLocks.Remove(mre); }
