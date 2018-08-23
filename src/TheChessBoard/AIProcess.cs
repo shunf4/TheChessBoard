@@ -173,7 +173,7 @@ namespace TheChessBoard
         public void AllowOutputAndWait()
         {
             // 秒表启动
-            Watch.Start();
+            //Watch.Start();
             // 先解除输出处的阻塞
             allowMoveHandle.Set();
             // 等待输出处给 outputWaitHandle 解除阻塞（表示终于接收到了输入），能等待 600000 毫秒（10分钟）

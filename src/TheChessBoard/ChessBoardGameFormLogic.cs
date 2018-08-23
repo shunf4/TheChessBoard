@@ -1114,7 +1114,9 @@ namespace TheChessBoard
                 if (BlackStatus == StdIOState.NotRequesting && !(HasBlackManuallyMoved))
                 {
                     Trace.TraceInformation("向黑 AI 发送：" + Game.Moves.Last().SANString);
-                    BlackAIProcess.WriteLine(Game.Moves.Last().StoredSANString);
+                    BlackAIProcess?.WriteLine(Game.Moves.Last().StoredSANString);
+                    if ((Mode == GameMode.BothAuto || Mode == GameMode.BlackAuto))
+                        BlackAIProcess?.Watch.Start();
                 }
             }
             else
@@ -1123,6 +1125,8 @@ namespace TheChessBoard
                 {
                     Trace.TraceInformation("向白 AI 发送：" + Game.Moves.Last().SANString);
                     WhiteAIProcess?.WriteLine(Game.Moves.Last().StoredSANString);
+                    if ((Mode == GameMode.BothAuto || Mode == GameMode.BlackAuto))
+                        WhiteAIProcess?.Watch.Start();
                 }
             }
 
