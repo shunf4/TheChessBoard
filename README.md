@@ -7,5 +7,3 @@ The Chess Board 是用于课程 10040504 的象棋对弈软件。
  - 查看历史棋盘
  
  附加了一个示例用 `ChessArtificialRetard.exe` 的 AI 程序。
-
-[也可以点击此处下载 Release](https://www.shunwww.cn/file/chessboard/)
